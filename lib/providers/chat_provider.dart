@@ -33,19 +33,15 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Chat> createChat({String? initialMessage}) async {
+  Future<Chat> createChat() async {
     final now = DateTime.now();
     final chat = Chat(
       id: _uuid.v4(),
-      title: initialMessage != null
-          ? _truncateTitle(initialMessage)
-          : 'New Chat',
+      title: 'New Chat',
       createdAt: now,
       updatedAt: now,
     );
 
-    await _db.insertChat(chat);
-    _chats.insert(0, chat);
     _currentChat = chat;
     _messages = [];
     notifyListeners();
@@ -85,31 +81,39 @@ class ChatProvider extends ChangeNotifier {
     if (content.trim().isEmpty) return;
 
     if (_currentChat == null) {
-      await createChat(initialMessage: content);
+      await createChat();
     }
 
     final chatId = _currentChat!.id;
+    final isDraft = _chats.every((c) => c.id != chatId);
+    final now = DateTime.now();
+
+    if (isDraft) {
+      _currentChat = _currentChat!.copyWith(
+        title: _truncateTitle(content),
+        updatedAt: now,
+      );
+      await _db.insertChat(_currentChat!);
+      _chats.insert(0, _currentChat!);
+    }
 
     final userMessage = Message(
       id: _uuid.v4(),
       chatId: chatId,
       role: 'user',
       content: content.trim(),
-      createdAt: DateTime.now(),
+      createdAt: now,
     );
 
     await _db.insertMessage(userMessage);
     _messages.add(userMessage);
 
-    _currentChat = _currentChat!.copyWith(
-      title: _messages.length == 1
-          ? _truncateTitle(content)
-          : _currentChat!.title,
-      updatedAt: DateTime.now(),
-    );
-    await _db.updateChat(_currentChat!);
-    _chats.removeWhere((c) => c.id == chatId);
-    _chats.insert(0, _currentChat!);
+    if (!isDraft) {
+      _currentChat = _currentChat!.copyWith(updatedAt: now);
+      await _db.updateChat(_currentChat!);
+      _chats.removeWhere((c) => c.id == chatId);
+      _chats.insert(0, _currentChat!);
+    }
 
     notifyListeners();
 

@@ -165,6 +165,8 @@ class _ChatScreenState extends State<ChatScreen> {
             ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+              addAutomaticKeepAlives: false,
+              addRepaintBoundaries: true,
               itemCount: provider.messages.length +
                   (provider.isGenerating ? 1 : 0),
               itemBuilder: (context, index) {
@@ -183,6 +185,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     message.isAssistant && isLastMessage;
 
                 return Padding(
+                  key: ValueKey(message.id),
                   padding: EdgeInsets.only(
                     bottom: message.isUser ? 12 : 16,
                   ),

@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Debug keystore — use GitHub Secret DEBUG_KEYSTORE_B64 in CI
+/android/app/debug.keystore

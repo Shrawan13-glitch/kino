@@ -47,6 +47,17 @@ jobs:
       - name: Build Android debug APK
         run: flutter build apk --debug
 
+      - name: Sign APK with persistent keystore
+        env:
+          DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+        run: |
+          echo "$DEBUG_KEYSTORE_B64" | base64 --decode > /tmp/debug.keystore
+          APK="build/app/outputs/flutter-apk/app-debug.apk"
+          jarsigner -keystore /tmp/debug.keystore \
+            -storepass android -keypass android \
+            -signedjar /tmp/app-signed.apk "$APK" androiddebugkey
+          mv /tmp/app-signed.apk "$APK"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
