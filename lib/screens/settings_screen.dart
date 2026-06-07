@@ -10,28 +10,28 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.background(context),
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back_rounded,
-              color: AppColors.textSecondary),
+          icon: Icon(Icons.arrow_back_rounded,
+              color: AppColors.textSecondary(context)),
           splashRadius: 20,
         ),
-        title: const Text(
+        title: Text(
           'Settings',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: AppColors.textPrimary(context),
             fontWeight: FontWeight.w600,
           ),
         ),
         centerTitle: false,
         elevation: 0,
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(0.5),
-          child: Divider(height: 0.5, color: AppColors.border),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(0.5),
+          child: Divider(height: 0.5, color: AppColors.border(context)),
         ),
       ),
       body: ListView(
@@ -74,9 +74,9 @@ class SettingsScreen extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         children: [
@@ -89,7 +89,7 @@ class SettingsScreen extends StatelessWidget {
             groupValue: settings.themeMode,
             onChanged: (v) => settings.setThemeMode(v!),
           ),
-          const Divider(height: 0.5, color: AppColors.border),
+          Divider(height: 0.5, color: AppColors.border(context)),
           _buildRadioTile(
             context,
             title: 'Light',
@@ -99,7 +99,7 @@ class SettingsScreen extends StatelessWidget {
             groupValue: settings.themeMode,
             onChanged: (v) => settings.setThemeMode(v!),
           ),
-          const Divider(height: 0.5, color: AppColors.border),
+          Divider(height: 0.5, color: AppColors.border(context)),
           _buildRadioTile(
             context,
             title: 'System',
@@ -136,7 +136,7 @@ class SettingsScreen extends StatelessWidget {
               Icon(
                 icon,
                 size: 22,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                color: isSelected ? AppColors.primary : AppColors.textSecondary(context),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -147,17 +147,18 @@ class SettingsScreen extends StatelessWidget {
                       title,
                       style: TextStyle(
                         color: isSelected
-                            ? AppColors.textPrimary
-                            : AppColors.textSecondary,
+                            ? AppColors.textPrimary(context)
+                            : AppColors.textSecondary(context),
                         fontSize: 15,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w400,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
                         fontSize: 12,
                       ),
                     ),
@@ -170,7 +171,8 @@ class SettingsScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isSelected ? AppColors.primary : AppColors.border,
+                    color:
+                        isSelected ? AppColors.primary : AppColors.border(context),
                     width: 2,
                   ),
                 ),
@@ -200,23 +202,23 @@ class SettingsScreen extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: TextField(
           controller: controller,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
             fontSize: 14,
           ),
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'https://api.example.com/v1',
-            hintStyle: TextStyle(color: AppColors.textSecondary),
+            hintStyle: TextStyle(color: AppColors.textSecondary(context)),
             border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
             isDense: true,
           ),
           onChanged: (value) => settings.setApiBaseUrl(value),
@@ -228,9 +230,9 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildDataOptions(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         children: [
@@ -243,7 +245,7 @@ class SettingsScreen extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('Backup feature coming soon'),
-                  backgroundColor: AppColors.surface,
+                  backgroundColor: AppColors.surface(context),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -252,7 +254,7 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
-          const Divider(height: 0.5, color: AppColors.border),
+          Divider(height: 0.5, color: AppColors.border(context)),
           _buildDataTile(
             context,
             icon: Icons.restore_outlined,
@@ -262,7 +264,7 @@ class SettingsScreen extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('Restore feature coming soon'),
-                  backgroundColor: AppColors.surface,
+                  backgroundColor: AppColors.surface(context),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -271,7 +273,7 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
-          const Divider(height: 0.5, color: AppColors.border),
+          Divider(height: 0.5, color: AppColors.border(context)),
           _buildDataTile(
             context,
             icon: Icons.delete_sweep_outlined,
@@ -293,7 +295,8 @@ class SettingsScreen extends StatelessWidget {
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
-    final color = isDestructive ? AppColors.error : AppColors.textPrimary;
+    final color =
+        isDestructive ? AppColors.error : AppColors.textPrimary(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -308,7 +311,7 @@ class SettingsScreen extends StatelessWidget {
                 size: 22,
                 color: isDestructive
                     ? AppColors.error
-                    : AppColors.textSecondary,
+                    : AppColors.textSecondary(context),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -326,8 +329,8 @@ class SettingsScreen extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
                         fontSize: 12,
                       ),
                     ),
@@ -337,7 +340,7 @@ class SettingsScreen extends StatelessWidget {
               Icon(
                 Icons.chevron_right_rounded,
                 size: 20,
-                color: AppColors.textSecondary.withValues(alpha: 0.5),
+                color: AppColors.textSecondary(context).withValues(alpha: 0.5),
               ),
             ],
           ),
@@ -349,16 +352,16 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildAboutSection(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         children: [
           _buildInfoTile(context, 'Version', '1.0.0'),
-          const Divider(height: 0.5, color: AppColors.border),
+          Divider(height: 0.5, color: AppColors.border(context)),
           _buildInfoTile(context, 'App', 'ChatMorphism'),
-          const Divider(height: 0.5, color: AppColors.border),
+          Divider(height: 0.5, color: AppColors.border(context)),
           _buildInfoTile(context, 'Database', 'SQLite (backup-ready)'),
         ],
       ),
@@ -372,16 +375,16 @@ class SettingsScreen extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-            ),
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 12,
+                      ),
           ),
           const Spacer(),
           Text(
             value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
@@ -395,21 +398,21 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.surface(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Text('Clear all chats?',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: const Text(
+        title: Text('Clear all chats?',
+            style: TextStyle(color: AppColors.textPrimary(ctx))),
+        content: Text(
           'This will permanently delete all conversations. This action cannot be undone.',
-          style: TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.textSecondary(ctx)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary(ctx))),
           ),
           TextButton(
             onPressed: () {

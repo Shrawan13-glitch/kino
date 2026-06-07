@@ -16,7 +16,8 @@ class ChatmorphismApp extends StatelessWidget {
       title: 'ChatMorphism',
       debugShowCheckedModeBanner: false,
       themeMode: settings.themeMode,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       home: const HomeScreen(),
       routes: {
         '/settings': (context) => const SettingsScreen(),

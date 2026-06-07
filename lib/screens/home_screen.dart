@@ -11,10 +11,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late AnimationController _sidebarController;
   late Animation<Offset> _slideAnimation;
-  late Animation<double> _fadeAnimation;
+  bool _isSidebarOpen = false;
 
   @override
   void initState() {
@@ -30,13 +30,6 @@ class _HomeScreenState extends State<HomeScreen>
       parent: _sidebarController,
       curve: Curves.easeOutCubic,
     ));
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 0.4,
-    ).animate(CurvedAnimation(
-      parent: _sidebarController,
-      curve: Curves.easeOutCubic,
-    ));
   }
 
   @override
@@ -46,25 +39,30 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _toggleSidebar() {
-    if (_sidebarController.isCompleted) {
+    if (_isSidebarOpen) {
       _sidebarController.reverse();
     } else {
       _sidebarController.forward();
     }
+    setState(() => _isSidebarOpen = !_isSidebarOpen);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.background(context),
       body: Stack(
         children: [
           ChatScreen(onMenuTap: _toggleSidebar),
-          FadeTransition(
-            opacity: _fadeAnimation,
+          IgnorePointer(
+            ignoring: !_isSidebarOpen,
             child: GestureDetector(
               onTap: _toggleSidebar,
-              child: Container(color: Colors.black),
+              child: AnimatedOpacity(
+                opacity: _isSidebarOpen ? 0.4 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: Container(color: Colors.black),
+              ),
             ),
           ),
           SlideTransition(

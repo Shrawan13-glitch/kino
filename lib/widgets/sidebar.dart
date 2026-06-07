@@ -13,10 +13,10 @@ class Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 300,
-      decoration: const BoxDecoration(
-        color: AppColors.sidebarBg,
+      decoration: BoxDecoration(
+        color: AppColors.sidebarBg(context),
         border: Border(
-          right: BorderSide(color: AppColors.border, width: 0.5),
+          right: BorderSide(color: AppColors.border(context), width: 0.5),
         ),
       ),
       child: Column(
@@ -46,13 +46,14 @@ class Sidebar extends StatelessWidget {
             'ChatMorphism',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: AppColors.textPrimary(context),
                 ),
           ),
           const Spacer(),
           IconButton(
             onPressed: onClose,
-            icon: const Icon(Icons.close, color: AppColors.textSecondary),
+            icon: Icon(Icons.close,
+                color: AppColors.textSecondary(context)),
             splashRadius: 20,
           ),
         ],
@@ -73,12 +74,12 @@ class Sidebar extends StatelessWidget {
           icon: const Icon(Icons.add_rounded, size: 20),
           label: const Text('New Chat'),
           style: TextButton.styleFrom(
-            foregroundColor: AppColors.textPrimary,
-            backgroundColor: AppColors.surfaceLight,
+            foregroundColor: AppColors.textPrimary(context),
+            backgroundColor: AppColors.surfaceLight(context),
             padding: const EdgeInsets.symmetric(vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.border(context)),
             ),
           ),
         ),
@@ -95,13 +96,13 @@ class Sidebar extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.chat_bubble_outline,
-                    color: AppColors.textSecondary.withValues(alpha: 0.4),
+                    color: AppColors.textSecondary(context).withValues(alpha: 0.4),
                     size: 40),
                 const SizedBox(height: 12),
                 Text(
                   'No conversations yet',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary.withValues(alpha: 0.6),
+                        color: AppColors.textSecondary(context).withValues(alpha: 0.6),
                       ),
                 ),
               ],
@@ -140,7 +141,7 @@ class Sidebar extends StatelessWidget {
         icon: const Icon(Icons.settings_outlined, size: 20),
         label: const Text('Settings'),
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.textSecondary,
+          foregroundColor: AppColors.textSecondary(context),
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -167,6 +168,9 @@ class _ChatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateStr = DateFormat('MMM d').format(chat.updatedAt);
+    final activeTextColor = isActive
+        ? AppColors.primary
+        : AppColors.textSecondary(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -185,9 +189,7 @@ class _ChatTile extends StatelessWidget {
                 Icon(
                   Icons.chat_bubble_outline_rounded,
                   size: 18,
-                  color: isActive
-                      ? AppColors.primary
-                      : AppColors.textSecondary,
+                  color: activeTextColor,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -201,8 +203,8 @@ class _ChatTile extends StatelessWidget {
                           fontWeight:
                               isActive ? FontWeight.w600 : FontWeight.w400,
                           color: isActive
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary,
+                              ? AppColors.textPrimary(context)
+                              : AppColors.textSecondary(context),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -210,9 +212,9 @@ class _ChatTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         dateStr,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: AppColors.textSecondary,
+                          color: AppColors.textSecondary(context),
                         ),
                       ),
                     ],

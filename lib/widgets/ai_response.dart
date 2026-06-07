@@ -20,47 +20,47 @@ class AiResponse extends StatelessWidget {
           data: content,
           selectable: true,
           styleSheet: MarkdownStyleSheet(
-            h1: const TextStyle(
-              color: AppColors.textPrimary,
+            h1: TextStyle(
+              color: AppColors.textPrimary(context),
               fontSize: 22,
               fontWeight: FontWeight.w700,
               height: 1.3,
             ),
-            h2: const TextStyle(
-              color: AppColors.textPrimary,
+            h2: TextStyle(
+              color: AppColors.textPrimary(context),
               fontSize: 19,
               fontWeight: FontWeight.w600,
               height: 1.3,
             ),
-            h3: const TextStyle(
-              color: AppColors.textPrimary,
+            h3: TextStyle(
+              color: AppColors.textPrimary(context),
               fontSize: 17,
               fontWeight: FontWeight.w600,
               height: 1.3,
             ),
-            p: const TextStyle(
-              color: AppColors.textPrimary,
+            p: TextStyle(
+              color: AppColors.textPrimary(context),
               fontSize: 15,
               height: 1.6,
             ),
-            strong: const TextStyle(
+            strong: TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimary(context),
             ),
-            em: const TextStyle(
+            em: TextStyle(
               fontStyle: FontStyle.italic,
-              color: AppColors.textSecondary,
+              color: AppColors.textSecondary(context),
             ),
             code: TextStyle(
-              backgroundColor: AppColors.surfaceLight,
+              backgroundColor: AppColors.surfaceLight(context),
               color: AppColors.accent,
               fontSize: 13,
               fontFamily: 'monospace',
             ),
             codeblockDecoration: BoxDecoration(
-              color: AppColors.surfaceLight,
+              color: AppColors.surfaceLight(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.border(context)),
             ),
             codeblockPadding: const EdgeInsets.all(16),
             blockquoteDecoration: BoxDecoration(
@@ -78,25 +78,24 @@ class AiResponse extends StatelessWidget {
               color: AppColors.primary,
               fontSize: 15,
             ),
-            tableHead: const TextStyle(
+            tableHead: TextStyle(
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimary(context),
             ),
-            tableBody: const TextStyle(
-              color: AppColors.textSecondary,
+            tableBody: TextStyle(
+              color: AppColors.textSecondary(context),
             ),
             tableBorder: TableBorder.all(
-              color: AppColors.border,
+              color: AppColors.border(context),
               width: 0.5,
             ),
             tableCellsPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
+              horizontal: 12, vertical: 8,
             ),
             horizontalRuleDecoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
-                  color: AppColors.border,
+                  color: AppColors.border(context),
                   width: 0.5,
                 ),
               ),

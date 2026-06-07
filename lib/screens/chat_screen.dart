@@ -55,12 +55,12 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.background(context),
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
-            Expanded(child: _buildMessageList()),
+            _buildHeader(context),
+            Expanded(child: _buildMessageList(context)),
             const ChatInputBar(),
           ],
         ),
@@ -68,22 +68,23 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Consumer<ChatProvider>(
       builder: (context, provider, _) {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: const BoxDecoration(
-            color: AppColors.background,
+          decoration: BoxDecoration(
+            color: AppColors.background(context),
             border: Border(
-              bottom: BorderSide(color: AppColors.border, width: 0.5),
+              bottom: BorderSide(color: AppColors.border(context), width: 0.5),
             ),
           ),
           child: Row(
             children: [
               IconButton(
                 onPressed: widget.onMenuTap,
-                icon: const Icon(Icons.menu_rounded, color: AppColors.textSecondary),
+                icon: Icon(Icons.menu_rounded,
+                    color: AppColors.textSecondary(context)),
                 splashRadius: 20,
               ),
               const SizedBox(width: 4),
@@ -98,12 +99,12 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               if (provider.currentChat != null)
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_horiz_rounded,
-                      color: AppColors.textSecondary),
-                  color: AppColors.surface,
+                  icon: Icon(Icons.more_horiz_rounded,
+                      color: AppColors.textSecondary(context)),
+                  color: AppColors.surface(context),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.border),
+                    side: BorderSide(color: AppColors.border(context)),
                   ),
                   onSelected: (value) {
                     if (value == 'delete') {
@@ -118,7 +119,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           Icon(Icons.delete_outline,
                               color: AppColors.error, size: 20),
                           SizedBox(width: 8),
-                          Text('Delete chat', style: TextStyle(color: AppColors.error)),
+                          Text('Delete chat',
+                              style: TextStyle(color: AppColors.error)),
                         ],
                       ),
                     ),
@@ -131,7 +133,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildMessageList() {
+  Widget _buildMessageList(BuildContext context) {
     return Consumer<ChatProvider>(
       builder: (context, provider, _) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -214,10 +216,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                const Text(
+                                Text(
                                   'ChatMorphism',
                                   style: TextStyle(
-                                    color: AppColors.textPrimary,
+                                    color: AppColors.textPrimary(context),
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -242,9 +244,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.surface(context),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.border(context)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.3),
@@ -253,9 +255,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       ],
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.arrow_downward_rounded,
-                      color: AppColors.textSecondary,
+                      color: AppColors.textSecondary(context),
                       size: 20,
                     ),
                   ),
@@ -324,14 +326,14 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.surfaceLight,
+          color: AppColors.surfaceLight(context),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.border(context)),
         ),
         child: Text(
           text,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
+          style: TextStyle(
+            color: AppColors.textSecondary(context),
             fontSize: 13,
           ),
         ),
@@ -343,21 +345,21 @@ class _ChatScreenState extends State<ChatScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.surface(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Text('Delete chat?',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: const Text(
+        title: Text('Delete chat?',
+            style: TextStyle(color: AppColors.textPrimary(ctx))),
+        content: Text(
           'This will permanently delete this conversation.',
-          style: TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.textSecondary(ctx)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary(ctx))),
           ),
           TextButton(
             onPressed: () {

@@ -46,10 +46,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-      decoration: const BoxDecoration(
-        color: AppColors.background,
+      decoration: BoxDecoration(
+        color: AppColors.background(context),
         border: Border(
-          top: BorderSide(color: AppColors.border, width: 0.5),
+          top: BorderSide(color: AppColors.border(context), width: 0.5),
         ),
       ),
       child: SafeArea(
@@ -61,10 +61,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
               child: Container(
                 constraints: const BoxConstraints(maxHeight: 120),
                 decoration: BoxDecoration(
-                  color: AppColors.inputBg,
+                  color: AppColors.inputBg(context),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppColors.border,
+                    color: AppColors.border(context),
                     width: 1,
                   ),
                 ),
@@ -77,17 +77,19 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         controller: _controller,
                         maxLines: null,
                         textInputAction: TextInputAction.newline,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
+                        style: TextStyle(
+                          color: AppColors.textPrimary(context),
                           fontSize: 15,
                           height: 1.4,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Message ChatMorphism...',
+                          hintStyle: TextStyle(
+                            color: AppColors.textSecondary(context),
+                          ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12,
                           ),
                           isDense: true,
                         ),
