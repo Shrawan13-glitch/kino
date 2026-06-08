@@ -10,6 +10,7 @@ import '../widgets/ai_response.dart';
 import '../widgets/typing_indicator.dart';
 import '../widgets/model_selector.dart';
 import '../widgets/thinking_block.dart';
+import '../widgets/tool_call_block.dart';
 import '../utils/content_parser.dart' show ContentParser;
 
 class ChatScreen extends StatefulWidget {
@@ -296,6 +297,19 @@ class _ChatScreenState extends State<ChatScreen> {
           isStreaming: isStreaming && message.content.isEmpty,
         ),
       ));
+    }
+
+    // Tool calls
+    if (message.toolCalls != null && message.toolCalls!.isNotEmpty) {
+      for (final tc in message.toolCalls!) {
+        segments.add(Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: ToolCallBlock(
+            toolCall: tc,
+            isStreaming: !tc.completed && !tc.error,
+          ),
+        ));
+      }
     }
 
     // Always parse content for think tags — handles both streaming chunks

@@ -1,9 +1,13 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
 import '../services/openrouter_service.dart';
+import '../services/search/search_service.dart';
+import '../services/search/webfetch_service.dart';
 import '../utils/content_parser.dart';
 import 'settings_provider.dart';
 
@@ -11,8 +15,13 @@ class ChatProvider extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
   final DatabaseHelper _db = DatabaseHelper.instance;
   final Uuid _uuid = const Uuid();
+  late final SearchService _searchService;
+  late final WebFetchService _webFetchService;
 
-  ChatProvider(this._settingsProvider);
+  ChatProvider(this._settingsProvider) {
+    _searchService = SearchService();
+    _webFetchService = WebFetchService();
+  }
 
   List<Chat> _chats = [];
   Chat? _currentChat;
@@ -20,6 +29,10 @@ class ChatProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isGenerating = false;
   bool _initialized = false;
+
+  /// In-memory tool messages appended during the current generation loop.
+  /// These include assistant tool_calls messages and tool result messages.
+  final List<Map<String, dynamic>> _toolMessages = [];
 
   List<Chat> get chats => _chats;
   Chat? get currentChat => _currentChat;
@@ -59,6 +72,7 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
 
     _chats = await _db.getAllChats();
+    await _searchService.init();
     _initialized = true;
     _isLoading = false;
     notifyListeners();
@@ -168,13 +182,16 @@ class ChatProvider extends ChangeNotifier {
       _chats.insert(0, _currentChat!);
     }
 
+    _toolMessages.clear();
     notifyListeners();
 
     await _generateResponse(chatId, model);
   }
 
-  List<Map<String, String>> _buildApiMessages() {
-    final list = <Map<String, String>>[
+  /// Builds the complete message list for the API, including persisted
+  /// messages and in-memory tool messages from the current generation loop.
+  List<Map<String, dynamic>> _buildApiMessages() {
+    final list = <Map<String, dynamic>>[
       {'role': 'system', 'content': _settingsProvider.systemPrompt},
     ];
 
@@ -182,7 +199,45 @@ class ChatProvider extends ChangeNotifier {
       list.add({'role': m.role, 'content': m.content});
     }
 
+    list.addAll(_toolMessages);
+
     return list;
+  }
+
+  /// Builds tool definitions in OpenAI-compatible format.
+  List<Map<String, dynamic>> _buildToolDefinitions() {
+    return [
+      OpenRouterService.makeToolDefinition(
+        name: 'web_search',
+        description:
+            'Search the web for current information. Returns up to 10 results with titles, URLs, and summaries. Use this to find recent news, facts, or anything that needs up-to-date information.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'query': {
+              'type': 'string',
+              'description': 'The search query',
+            },
+          },
+          'required': ['query'],
+        },
+      ),
+      OpenRouterService.makeToolDefinition(
+        name: 'fetch_url',
+        description:
+            'Fetch and read the text content of a web page. Returns stripped text up to ~50KB. Use this to get detailed information from a specific URL.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'url': {
+              'type': 'string',
+              'description': 'The URL of the web page to fetch',
+            },
+          },
+          'required': ['url'],
+        },
+      ),
+    ];
   }
 
   Future<void> _generateResponse(String chatId, String model) async {
@@ -201,24 +256,94 @@ class ChatProvider extends ChangeNotifier {
     _messages.add(aiMessage);
     notifyListeners();
 
-    try {
-      final stream = OpenRouterService.sendMessageStream(
-        apiKey: _settingsProvider.apiKey,
-        model: model,
-        messages: _buildApiMessages(),
-      );
+    int turn = 0;
+    const int maxTurns = 5;
 
-      int lastNotify = 0;
-      await for (final chunk in stream) {
-        aiMessage.content += chunk.content;
-        if (chunk.reasoning != null) {
-          aiMessage.reasoning = (aiMessage.reasoning ?? '') + chunk.reasoning!;
-        }
-        final now = DateTime.now().millisecondsSinceEpoch;
-        if (now - lastNotify > 50) {
+    try {
+      while (turn < maxTurns) {
+        turn++;
+
+        final result = OpenRouterService.sendMessageStream(
+          apiKey: _settingsProvider.apiKey,
+          model: model,
+          messages: _buildApiMessages(),
+          tools: _buildToolDefinitions(),
+        );
+
+        final buffer = StringBuffer();
+        final reasoningBuffer = StringBuffer();
+
+        await for (final chunk in result.stream) {
+          if (chunk.content.isNotEmpty) {
+            buffer.write(chunk.content);
+            aiMessage.content += chunk.content;
+          }
+          if (chunk.reasoning != null && chunk.reasoning!.isNotEmpty) {
+            reasoningBuffer.write(chunk.reasoning);
+            aiMessage.reasoning = (aiMessage.reasoning ?? '') + chunk.reasoning!;
+          }
           notifyListeners();
-          lastNotify = now;
         }
+
+        final toolCalls = await result.toolCalls;
+        if (toolCalls.isEmpty) break;
+
+        // Record tool calls on the message for UI display
+        final msgToolCalls = <ToolCall>[];
+        for (final tc in toolCalls) {
+          msgToolCalls.add(ToolCall(
+            id: tc.id,
+            name: tc.name,
+            arguments: tc.arguments,
+          ));
+        }
+        aiMessage.toolCalls = [
+          ...?aiMessage.toolCalls,
+          ...msgToolCalls,
+        ];
+        notifyListeners();
+
+        // Record the assistant message with tool calls for the API context
+        final assistantMsg = <String, dynamic>{
+          'role': 'assistant',
+          'content': buffer.toString(),
+          'tool_calls': toolCalls.map((tc) {
+            return {
+              'id': tc.id,
+              'type': 'function',
+              'function': {
+                'name': tc.name,
+                'arguments': jsonEncode(tc.arguments),
+              },
+            };
+          }).toList(),
+        };
+        _toolMessages.add(assistantMsg);
+
+        // Execute each tool call
+        for (var i = 0; i < toolCalls.length; i++) {
+          final tc = toolCalls[i];
+          String resultContent;
+
+          try {
+            resultContent = await _executeTool(tc.name, tc.arguments);
+            msgToolCalls[i].completed = true;
+            msgToolCalls[i].result = resultContent;
+          } catch (e) {
+            resultContent = 'Error executing tool "${tc.name}": $e';
+            msgToolCalls[i].error = true;
+            msgToolCalls[i].result = resultContent;
+          }
+          notifyListeners();
+
+          final toolMsg = OpenRouterService.makeToolResultMessage(
+            toolCallId: tc.id,
+            content: resultContent,
+          );
+          _toolMessages.add(toolMsg);
+        }
+
+        notifyListeners();
       }
 
       // Fallback: extract <think>/<thinking> tags from content for models
@@ -241,8 +366,65 @@ class ChatProvider extends ChangeNotifier {
       await _db.deleteMessage(aiMessage.id);
       await _insertErrorMessage(chatId, 'Connection error: $e');
     } finally {
+      _toolMessages.clear();
       _isGenerating = false;
       notifyListeners();
+    }
+  }
+
+  /// Executes a tool by name with the given arguments.
+  Future<String> _executeTool(
+      String name, Map<String, dynamic> arguments) async {
+    switch (name) {
+      case 'web_search':
+        final query = arguments['query'] as String?;
+        if (query == null || query.isEmpty) {
+          return 'Error: query parameter is required for web_search';
+        }
+        final container = await _searchService.search(query);
+        final results = container.getOrderedResults();
+        final answers = container.answers;
+
+        if (results.isEmpty && answers.isEmpty) {
+          return 'No search results found for "$query".';
+        }
+
+        final sb = StringBuffer();
+        sb.writeln('Search results for "$query":');
+        sb.writeln();
+
+        for (var i = 0; i < results.length; i++) {
+          final r = results[i];
+          sb.writeln('${i + 1}. ${r.title}');
+          sb.writeln('   URL: ${r.url}');
+          sb.writeln('   ${r.content}');
+          if (r.publishedDate != null) {
+            sb.writeln('   Published: ${r.publishedDate}');
+          }
+          sb.writeln();
+        }
+
+        for (final a in answers) {
+          sb.writeln('Answer: ${a.answer}');
+          if (a.url != null) sb.writeln('Source: ${a.url}');
+          sb.writeln();
+        }
+
+        return sb.toString().trim();
+
+      case 'fetch_url':
+        final url = arguments['url'] as String?;
+        if (url == null || url.isEmpty) {
+          return 'Error: url parameter is required for fetch_url';
+        }
+        final content = await _webFetchService.fetchContent(url);
+        if (content == null) {
+          return 'Failed to fetch content from $url. The page might be unreachable or blocked.';
+        }
+        return 'Content from $url:\n\n$content';
+
+      default:
+        return 'Unknown tool: $name. Available tools: web_search, fetch_url.';
     }
   }
 

@@ -1,5 +1,23 @@
 import 'dart:convert';
 
+class ToolCall {
+  final String id;
+  final String name;
+  final Map<String, dynamic> arguments;
+  String? result;
+  bool completed;
+  bool error;
+
+  ToolCall({
+    required this.id,
+    required this.name,
+    required this.arguments,
+    this.result,
+    this.completed = false,
+    this.error = false,
+  });
+}
+
 class Message {
   final String id;
   final String chatId;
@@ -9,6 +27,10 @@ class Message {
   final DateTime createdAt;
   Map<String, dynamic>? metadata;
 
+  /// In-memory tool calls attached to this assistant message.
+  /// Not persisted to the database.
+  List<ToolCall>? toolCalls;
+
   Message({
     required this.id,
     required this.chatId,
@@ -17,6 +39,7 @@ class Message {
     this.reasoning,
     required this.createdAt,
     this.metadata,
+    this.toolCalls,
   });
 
   bool get isUser => role == 'user';
