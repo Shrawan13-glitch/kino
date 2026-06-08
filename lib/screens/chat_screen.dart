@@ -220,10 +220,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 final isStreaming = provider.isGenerating &&
                     index == provider.messages.length - 1 &&
                     message.isAssistant;
-                final isLastMessage =
-                    index == provider.messages.length - 1;
-                final showAvatar =
-                    message.isAssistant && isLastMessage && !isStreaming;
 
                 if (isStreaming && message.content.isEmpty) {
                   return const Padding(
@@ -244,41 +240,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       if (message.isUser)
                         UserBubble(text: message.content)
                       else ...[
-                        if (showAvatar)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        AppColors.primary,
-                                        AppColors.bubbleGradientEnd,
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.auto_awesome,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'ChatMorphism',
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary(context),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ..._buildContentSegments(context, message, isStreaming),
                       ],
                     ],
@@ -381,21 +342,6 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.bubbleGradientEnd],
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.auto_awesome,
-                color: Colors.white,
-                size: 32,
-              ),
-            ),
             const SizedBox(height: 24),
             Text(
               'How can I help you today?',

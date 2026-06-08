@@ -17,7 +17,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1500),
     )..repeat();
   }
 
@@ -35,29 +35,32 @@ class _TypingIndicatorState extends State<TypingIndicator>
         padding: const EdgeInsets.only(left: 4, bottom: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: List.generate(3, (index) {
-            return AnimatedBuilder(
+          children: [
+            AnimatedBuilder(
               animation: _controller,
-              builder: (context, child) {
-                final value = ((_controller.value * 3 + index) % 1.0);
-                final scale = 0.4 + (0.6 * (1 - (value - 0.5).abs() * 2));
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Transform.scale(
-                    scale: scale.clamp(0.4, 1.0),
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+              builder: (context, _) {
+                final pulse =
+                    (1 - (_controller.value * 2 - 1).abs()).clamp(0.3, 1.0);
+                return Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary.withValues(alpha: pulse),
                   ),
                 );
               },
-            );
-          }),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'thinking...',
+              style: TextStyle(
+                color: AppColors.textSecondary(context),
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ),
       ),
     );
