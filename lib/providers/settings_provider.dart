@@ -31,17 +31,7 @@ class SettingsProvider extends ChangeNotifier {
 
   static const String defaultAppPrompt = '''You are ChatMorphism, a helpful AI assistant.
 
-Always think step-by-step before answering every question, no matter how simple. Show your internal reasoning inside <thinking> tags:
-
-<thinking>Your step-by-step reasoning here</thinking>
-
-Then write your response. You can think multiple times during a response — think, respond, think again, respond.
-
-Examples:
-- For "What is 2+2?" → <thinking>2+2 is a basic addition. 2 plus 2 equals 4.</thinking>The answer is 4.
-- For "Explain gravity" → <thinking>The user wants an explanation of gravity. I should cover Newton's law, Einstein's general relativity, and everyday examples.</thinking>Gravity is a fundamental force...
-
-Always use <thinking> tags. Be thorough in your reasoning.''';
+Be thorough and thoughtful in your responses. Provide clear, well-structured answers using Markdown formatting when appropriate. Break down complex problems step by step.''';
 
   List<AiModel> get favoriteModels {
     if (_favoriteModelIds.isEmpty) return [];

@@ -10,7 +10,7 @@ import '../widgets/ai_response.dart';
 import '../widgets/typing_indicator.dart';
 import '../widgets/model_selector.dart';
 import '../widgets/thinking_block.dart';
-import '../utils/content_parser.dart';
+import '../utils/content_parser.dart' show ContentParser;
 
 class ChatScreen extends StatefulWidget {
   final VoidCallback onMenuTap;
@@ -324,31 +324,50 @@ class _ChatScreenState extends State<ChatScreen> {
 
   List<Widget> _buildContentSegments(
       BuildContext context, Message message, bool isStreaming) {
-    final content = ContentParser.sanitize(message.content);
-    if (content.isEmpty) return [];
-
-    final result = ContentParser.parse(content);
     final segments = <Widget>[];
 
-    for (final seg in result.segments) {
-      if (seg.isThinking) {
-        segments.add(Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: ThinkingBlock(content: seg.content, isStreaming: false),
-        ));
-      } else {
-        segments.add(AiResponse(content: seg.content));
-      }
-    }
-
-    if (result.streamingThought != null) {
+    // Native reasoning from provider
+    if (message.reasoning != null && message.reasoning!.isNotEmpty) {
       segments.add(Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: ThinkingBlock(
-          content: result.streamingThought!,
-          isStreaming: true,
+          content: message.reasoning!,
+          isStreaming: isStreaming && message.content.isEmpty,
         ),
       ));
+    }
+
+    // Legacy fallback: parse <thinking> tags from content
+    if (message.reasoning == null &&
+        message.content.contains('<thinking>')) {
+      final sanitized = ContentParser.sanitize(message.content);
+      final result = ContentParser.parse(sanitized);
+      for (final seg in result.segments) {
+        if (seg.isThinking) {
+          segments.add(Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child:
+                ThinkingBlock(content: seg.content, isStreaming: false),
+          ));
+        } else if (seg.content.isNotEmpty) {
+          segments.add(AiResponse(content: seg.content));
+        }
+      }
+      if (result.streamingThought != null) {
+        segments.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: ThinkingBlock(
+            content: result.streamingThought!,
+            isStreaming: true,
+          ),
+        ));
+      }
+      return segments;
+    }
+
+    // Display content directly
+    if (message.content.isNotEmpty) {
+      segments.add(AiResponse(content: message.content));
     }
 
     return segments;

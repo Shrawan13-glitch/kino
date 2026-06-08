@@ -22,7 +22,7 @@ class DatabaseHelper {
     final path = p.join(dir.path, fileName);
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -68,6 +68,9 @@ class DatabaseHelper {
           value TEXT NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE messages ADD COLUMN reasoning TEXT');
     }
   }
 
@@ -122,11 +125,16 @@ class DatabaseHelper {
     await db.delete('messages', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> updateMessageContent(String id, String content) async {
+  Future<void> updateMessageContent(String id, String content,
+      {String? reasoning}) async {
     final db = await database;
+    final values = <String, dynamic>{'content': content};
+    if (reasoning != null) {
+      values['reasoning'] = reasoning;
+    }
     await db.update(
       'messages',
-      {'content': content},
+      values,
       where: 'id = ?',
       whereArgs: [id],
     );

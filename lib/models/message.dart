@@ -5,6 +5,7 @@ class Message {
   final String chatId;
   final String role;
   String content;
+  String? reasoning;
   final DateTime createdAt;
   Map<String, dynamic>? metadata;
 
@@ -13,6 +14,7 @@ class Message {
     required this.chatId,
     required this.role,
     required this.content,
+    this.reasoning,
     required this.createdAt,
     this.metadata,
   });
@@ -26,6 +28,7 @@ class Message {
       'chat_id': chatId,
       'role': role,
       'content': content,
+      'reasoning': reasoning,
       'created_at': createdAt.toIso8601String(),
       'metadata': metadata != null ? jsonEncode(metadata) : null,
     };
@@ -37,6 +40,7 @@ class Message {
       chatId: map['chat_id'] as String,
       role: map['role'] as String,
       content: map['content'] as String,
+      reasoning: map['reasoning'] as String?,
       createdAt: DateTime.parse(map['created_at'] as String),
       metadata: map['metadata'] != null
           ? jsonDecode(map['metadata'] as String) as Map<String, dynamic>

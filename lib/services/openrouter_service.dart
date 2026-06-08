@@ -3,6 +3,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/ai_model.dart';
 
+class StreamChunk {
+  final String content;
+  final String? reasoning;
+  const StreamChunk({required this.content, this.reasoning});
+}
+
 class OpenRouterService {
   static const String baseUrl = 'https://openrouter.ai/api/v1';
 
@@ -65,12 +71,12 @@ class OpenRouterService {
     throw OpenRouterException(errorMsg);
   }
 
-  static Stream<String> sendMessageStream({
+  static Stream<StreamChunk> sendMessageStream({
     required String apiKey,
     required String model,
     required List<Map<String, String>> messages,
   }) {
-    final controller = StreamController<String>();
+    final controller = StreamController<StreamChunk>();
 
     _startStreaming(controller, apiKey, model, messages);
 
@@ -78,7 +84,7 @@ class OpenRouterService {
   }
 
   static Future<void> _startStreaming(
-    StreamController<String> controller,
+    StreamController<StreamChunk> controller,
     String apiKey,
     String model,
     List<Map<String, String>> messages,
@@ -128,8 +134,13 @@ class OpenRouterService {
         if (delta == null) continue;
 
         final content = delta['content'] as String?;
-        if (content != null && content.isNotEmpty) {
-          controller.add(content);
+        final reasoning = delta['reasoning_content'] as String?;
+        if ((content != null && content.isNotEmpty) ||
+            (reasoning != null && reasoning.isNotEmpty)) {
+          controller.add(StreamChunk(
+            content: content ?? '',
+            reasoning: reasoning?.isNotEmpty == true ? reasoning : null,
+          ));
         }
       }
     } catch (e) {

@@ -4,6 +4,7 @@ import '../database/database_helper.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
 import '../services/openrouter_service.dart';
+import '../utils/content_parser.dart';
 import 'settings_provider.dart';
 
 class ChatProvider extends ChangeNotifier {
@@ -88,6 +89,7 @@ class ChatProvider extends ChangeNotifier {
 
     _currentChat = _chats.firstWhere((c) => c.id == id);
     _messages = await _db.getMessages(id);
+    await _migrateLegacyMessages();
 
     _isLoading = false;
     notifyListeners();
@@ -208,7 +210,10 @@ class ChatProvider extends ChangeNotifier {
 
       int lastNotify = 0;
       await for (final chunk in stream) {
-        aiMessage.content += chunk;
+        aiMessage.content += chunk.content;
+        if (chunk.reasoning != null) {
+          aiMessage.reasoning = (aiMessage.reasoning ?? '') + chunk.reasoning!;
+        }
         final now = DateTime.now().millisecondsSinceEpoch;
         if (now - lastNotify > 50) {
           notifyListeners();
@@ -217,7 +222,8 @@ class ChatProvider extends ChangeNotifier {
       }
       notifyListeners();
 
-      await _db.updateMessageContent(aiMessage.id, aiMessage.content);
+      await _db.updateMessageContent(aiMessage.id, aiMessage.content,
+          reasoning: aiMessage.reasoning);
     } on OpenRouterException catch (e) {
       _messages.remove(aiMessage);
       await _db.deleteMessage(aiMessage.id);
@@ -229,6 +235,34 @@ class ChatProvider extends ChangeNotifier {
     } finally {
       _isGenerating = false;
       notifyListeners();
+    }
+  }
+
+  /// Migrates legacy messages that have `<thinking>` tags embedded in content
+  /// to use the separate [reasoning] field instead.
+  Future<void> _migrateLegacyMessages() async {
+    for (final msg in _messages) {
+      if (!msg.isAssistant ||
+          msg.reasoning != null ||
+          !msg.content.contains('<thinking>')) {
+        continue;
+      }
+
+      final sanitized = ContentParser.sanitize(msg.content);
+      final result = ContentParser.parse(sanitized);
+      final reasoningParts =
+          result.segments.where((s) => s.isThinking).map((s) => s.content);
+      final textParts =
+          result.segments.where((s) => !s.isThinking).map((s) => s.content);
+
+      final reasoning = reasoningParts.join('\n\n');
+      if (reasoning.isEmpty) continue;
+
+      final cleanedContent = textParts.join('');
+      msg.reasoning = reasoning;
+      msg.content = cleanedContent;
+      await _db.updateMessageContent(msg.id, cleanedContent,
+          reasoning: reasoning);
     }
   }
 
