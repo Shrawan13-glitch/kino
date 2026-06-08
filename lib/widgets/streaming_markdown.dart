@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../utils/markdown/renderer.dart';
+import 'package:gpt_markdown/gpt_markdown.dart';
 
 class StreamingMarkdown extends StatefulWidget {
   final String content;
@@ -124,12 +124,9 @@ class _StreamingMarkdownState extends State<StreamingMarkdown>
 
     Widget body;
     if (widget.isStreaming) {
-      body = _buildStreaming(context);
+      body = _buildStreaming();
     } else {
-      body = MarkdownRender(
-        data: _displayContent,
-        selectable: true,
-      );
+      body = GptMarkdown(_displayContent);
     }
 
     return Align(
@@ -155,7 +152,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown>
     );
   }
 
-  Widget _buildStreaming(BuildContext context) {
+  Widget _buildStreaming() {
     final bothNonEmpty = _buf0.isNotEmpty && _buf1.isNotEmpty;
     final doFade = _fading && bothNonEmpty;
 
@@ -170,14 +167,14 @@ class _StreamingMarkdownState extends State<StreamingMarkdown>
                 opacity: _front == 0
                     ? (doFade ? 1.0 - alpha : 1.0)
                     : (doFade ? alpha : 0.0),
-                child: MarkdownRender(data: _buf0),
+                child: GptMarkdown(_buf0),
               ),
             if (_buf1.isNotEmpty)
               Opacity(
                 opacity: _front == 1
                     ? (doFade ? 1.0 - alpha : 1.0)
                     : (doFade ? alpha : 0.0),
-                child: MarkdownRender(data: _buf1),
+                child: GptMarkdown(_buf1),
               ),
           ],
         );

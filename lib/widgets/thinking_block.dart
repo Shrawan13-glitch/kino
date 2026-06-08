@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gpt_markdown/gpt_markdown.dart';
 import '../constants.dart';
-import '../utils/markdown/renderer.dart';
 
 class ThinkingBlock extends StatefulWidget {
   final String content;
@@ -162,22 +162,7 @@ class _ThinkingBlockState extends State<ThinkingBlock>
                             fontStyle: FontStyle.italic,
                           ),
                         )
-                      : MarkdownRender(
-                          data: widget.content,
-                          style: MarkdownStyle(
-                            textColor: AppColors.textSecondary(context),
-                            secondaryTextColor: AppColors.textSecondary(context),
-                            codeColor: AppColors.accent,
-                            codeBackground: AppColors.surfaceLight(context).withValues(alpha: 0.5),
-                            bodySize: 12,
-                            codeSize: 11,
-                            lineHeight: 1.5,
-                            blockquoteBar: AppColors.textSecondary(context),
-                            blockquoteBg: AppColors.textSecondary(context).withValues(alpha: 0.06),
-                            hrColor: AppColors.border(context).withValues(alpha: 0.3),
-                            checkboxBorder: AppColors.textSecondary(context).withValues(alpha: 0.4),
-                          ),
-                        ),
+                      : GptMarkdown(widget.content),
                 ),
             ],
           ),
