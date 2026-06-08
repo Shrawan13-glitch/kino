@@ -278,10 +278,12 @@ class ChatProvider extends ChangeNotifier {
           if (chunk.content.isNotEmpty) {
             buffer.write(chunk.content);
             aiMessage.content += chunk.content;
+            notifyListeners();
           }
           if (chunk.reasoning != null && chunk.reasoning!.isNotEmpty) {
             reasoningBuffer.write(chunk.reasoning);
             aiMessage.reasoning = (aiMessage.reasoning ?? '') + chunk.reasoning!;
+            notifyListeners();
           }
 
           // Tool call start — add a "Running..." entry to the message immediately
