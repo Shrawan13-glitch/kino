@@ -2,6 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import '../utils/table_builder.dart';
+import '../utils/blockquote_component.dart';
+
+List<MarkdownComponent> _components(BuildContext context) {
+  return [
+    ...MarkdownComponent.globalComponents.where((c) => c is! BlockQuote),
+    BeautifulBlockQuote(),
+  ];
+}
 
 class StreamingMarkdown extends StatefulWidget {
   final String content;
@@ -79,10 +87,11 @@ class _StreamingMarkdownState extends State<StreamingMarkdown>
     }
 
     _wasStreaming = true;
+    final stripped = stripBlockquotes(content);
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
-      _scheduleCrossfade(widget.content);
+      _scheduleCrossfade(stripped);
     });
   }
 
@@ -123,11 +132,17 @@ class _StreamingMarkdownState extends State<StreamingMarkdown>
   Widget build(BuildContext context) {
     if (widget.content.isEmpty) return const SizedBox.shrink();
 
+    final comps = _components(context);
+
     Widget body;
     if (widget.isStreaming) {
-      body = _buildStreaming();
+      body = _buildStreaming(comps);
     } else {
-      body = GptMarkdown(_displayContent, tableBuilder: tableWidget);
+      body = GptMarkdown(
+        _displayContent,
+        tableBuilder: tableWidget,
+        components: comps,
+      );
     }
 
     return Align(
@@ -153,7 +168,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown>
     );
   }
 
-  Widget _buildStreaming() {
+  Widget _buildStreaming(List<MarkdownComponent> comps) {
     final bothNonEmpty = _buf0.isNotEmpty && _buf1.isNotEmpty;
     final doFade = _fading && bothNonEmpty;
 
@@ -168,14 +183,22 @@ class _StreamingMarkdownState extends State<StreamingMarkdown>
                 opacity: _front == 0
                     ? (doFade ? 1.0 - alpha : 1.0)
                     : (doFade ? alpha : 0.0),
-                child: GptMarkdown(_buf0, tableBuilder: tableWidget),
+                child: GptMarkdown(
+                  _buf0,
+                  tableBuilder: tableWidget,
+                  components: comps,
+                ),
               ),
             if (_buf1.isNotEmpty)
               Opacity(
                 opacity: _front == 1
                     ? (doFade ? 1.0 - alpha : 1.0)
                     : (doFade ? alpha : 0.0),
-                child: GptMarkdown(_buf1, tableBuilder: tableWidget),
+                child: GptMarkdown(
+                  _buf1,
+                  tableBuilder: tableWidget,
+                  components: comps,
+                ),
               ),
           ],
         );

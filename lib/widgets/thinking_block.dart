@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import '../constants.dart';
 import '../utils/table_builder.dart';
+import '../utils/blockquote_component.dart';
 
 class ThinkingBlock extends StatefulWidget {
   final String content;
@@ -163,7 +164,14 @@ class _ThinkingBlockState extends State<ThinkingBlock>
                             fontStyle: FontStyle.italic,
                           ),
                         )
-                      : GptMarkdown(widget.content, tableBuilder: tableWidget),
+                      : GptMarkdown(
+                          widget.content,
+                          tableBuilder: tableWidget,
+                          components: [
+                            ...MarkdownComponent.globalComponents.where((c) => c is! BlockQuote),
+                            BeautifulBlockQuote(),
+                          ],
+                        ),
                 ),
             ],
           ),
