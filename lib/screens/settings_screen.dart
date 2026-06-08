@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../constants.dart';
 import '../providers/settings_provider.dart';
 import '../providers/chat_provider.dart';
+import 'models_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -41,9 +42,9 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 8),
           _buildThemeSelector(context),
           const SizedBox(height: 24),
-          _buildSectionHeader(context, 'API Configuration'),
+          _buildSectionHeader(context, 'Providers'),
           const SizedBox(height: 8),
-          _buildApiUrlField(context),
+          _buildProviderTile(context),
           const SizedBox(height: 24),
           _buildSectionHeader(context, 'Data'),
           const SizedBox(height: 8),
@@ -196,9 +197,12 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildApiUrlField(BuildContext context) {
-    final settings = context.read<SettingsProvider>();
-    final controller = TextEditingController(text: settings.apiBaseUrl);
+  Widget _buildProviderTile(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final isConnected = settings.hasApiKey;
+    final subtitle = isConnected
+        ? '${settings.favoriteModelIds.length} models selected'
+        : 'Tap to configure';
 
     return Container(
       decoration: BoxDecoration(
@@ -206,22 +210,60 @@ class SettingsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border(context)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: TextField(
-          controller: controller,
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontSize: 14,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ModelsScreen()),
           ),
-          decoration: InputDecoration(
-            hintText: 'https://api.example.com/v1',
-            hintStyle: TextStyle(color: AppColors.textSecondary(context)),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-            isDense: true,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Icon(Icons.key_rounded,
+                    size: 22,
+                    color: AppColors.textSecondary(context)),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('OpenRouter',
+                          style: TextStyle(
+                              color: AppColors.textPrimary(context),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 2),
+                      Text(subtitle,
+                          style: TextStyle(
+                              color: AppColors.textSecondary(context),
+                              fontSize: 12)),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isConnected
+                        ? AppColors.success.withValues(alpha: 0.15)
+                        : AppColors.error.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    isConnected ? 'Connected' : 'Setup',
+                    style: TextStyle(
+                      color:
+                          isConnected ? AppColors.success : AppColors.error,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          onChanged: (value) => settings.setApiBaseUrl(value),
         ),
       ),
     );

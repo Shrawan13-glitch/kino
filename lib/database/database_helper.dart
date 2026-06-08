@@ -22,8 +22,9 @@ class DatabaseHelper {
     final path = p.join(dir.path, fileName);
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
 
@@ -51,6 +52,23 @@ class DatabaseHelper {
     ''');
     await db.execute('CREATE INDEX idx_messages_chat_id ON messages(chat_id)');
     await db.execute('CREATE INDEX idx_chats_updated ON chats(updated_at)');
+    await db.execute('''
+      CREATE TABLE settings(
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS settings(
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
+      ''');
+    }
   }
 
   Future<List<Chat>> getAllChats() async {
@@ -104,6 +122,16 @@ class DatabaseHelper {
     await db.delete('messages', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<void> updateMessageContent(String id, String content) async {
+    final db = await database;
+    await db.update(
+      'messages',
+      {'content': content},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<String> exportToJson() async {
     final db = await database;
     final chats = await db.query('chats');
@@ -142,5 +170,38 @@ class DatabaseHelper {
     final db = await database;
     await db.delete('messages');
     await db.delete('chats');
+  }
+
+  Future<String?> getSetting(String key) async {
+    final db = await database;
+    final maps = await db.query(
+      'settings',
+      where: 'key = ?',
+      whereArgs: [key],
+    );
+    if (maps.isEmpty) return null;
+    return maps.first['value'] as String;
+  }
+
+  Future<void> setSetting(String key, String value) async {
+    final db = await database;
+    await db.insert(
+      'settings',
+      {'key': key, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> deleteSetting(String key) async {
+    final db = await database;
+    await db.delete('settings', where: 'key = ?', whereArgs: [key]);
+  }
+
+  Future<Map<String, String>> getAllSettings() async {
+    final db = await database;
+    final maps = await db.query('settings');
+    return {
+      for (final map in maps) map['key'] as String: map['value'] as String,
+    };
   }
 }

@@ -3,11 +3,15 @@ import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
-import '../utils/mock_responses.dart';
+import '../services/openrouter_service.dart';
+import 'settings_provider.dart';
 
 class ChatProvider extends ChangeNotifier {
+  final SettingsProvider _settingsProvider;
   final DatabaseHelper _db = DatabaseHelper.instance;
   final Uuid _uuid = const Uuid();
+
+  ChatProvider(this._settingsProvider);
 
   List<Chat> _chats = [];
   Chat? _currentChat;
@@ -23,6 +27,9 @@ class ChatProvider extends ChangeNotifier {
   bool get isGenerating => _isGenerating;
   bool get initialized => _initialized;
 
+  String get _effectiveModel =>
+      _currentChat?.model ?? _settingsProvider.defaultModel;
+
   Future<void> initialize() async {
     _isLoading = true;
     notifyListeners();
@@ -33,13 +40,14 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Chat> createChat() async {
+  Future<Chat> createChat({String? model}) async {
     final now = DateTime.now();
     final chat = Chat(
       id: _uuid.v4(),
       title: 'New Chat',
       createdAt: now,
       updatedAt: now,
+      model: model ?? _settingsProvider.defaultModel,
     );
 
     _currentChat = chat;
@@ -77,8 +85,21 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setChatModel(String modelId) async {
+    if (_currentChat == null) return;
+
+    _currentChat = _currentChat!.copyWith(model: modelId);
+    await _db.updateChat(_currentChat!);
+    notifyListeners();
+  }
+
   Future<void> sendMessage(String content) async {
     if (content.trim().isEmpty) return;
+
+    if (!_settingsProvider.hasApiKey) {
+      _showError('No API key configured. Add one in Settings > Providers.');
+      return;
+    }
 
     if (_currentChat == null) {
       await createChat();
@@ -87,11 +108,18 @@ class ChatProvider extends ChangeNotifier {
     final chatId = _currentChat!.id;
     final isDraft = _chats.every((c) => c.id != chatId);
     final now = DateTime.now();
+    final model = _effectiveModel;
+
+    if (model.isEmpty) {
+      _showError('No model selected. Select one in Settings > Providers.');
+      return;
+    }
 
     if (isDraft) {
       _currentChat = _currentChat!.copyWith(
         title: _truncateTitle(content),
         updatedAt: now,
+        model: model,
       );
       await _db.insertChat(_currentChat!);
       _chats.insert(0, _currentChat!);
@@ -117,34 +145,67 @@ class ChatProvider extends ChangeNotifier {
 
     notifyListeners();
 
-    await _generateMockResponse(chatId);
+    await _generateResponse(chatId, model);
   }
 
-  Future<void> _generateMockResponse(String chatId) async {
+  Future<void> _generateResponse(String chatId, String model) async {
     _isGenerating = true;
     notifyListeners();
-
-    await Future.delayed(const Duration(milliseconds: 1200));
-
-    final lastUserMsg = _messages.lastWhere(
-      (m) => m.isUser,
-      orElse: () => _messages.first,
-    );
-
-    final responseContent = MockResponses.getResponse(lastUserMsg.content);
 
     final aiMessage = Message(
       id: _uuid.v4(),
       chatId: chatId,
       role: 'assistant',
-      content: responseContent,
+      content: '',
       createdAt: DateTime.now(),
     );
 
     await _db.insertMessage(aiMessage);
     _messages.add(aiMessage);
-    _isGenerating = false;
     notifyListeners();
+
+    try {
+      final apiMessages = _messages
+          .where((m) => m.id != aiMessage.id)
+          .map((m) => {'role': m.role, 'content': m.content})
+          .toList();
+
+      final stream = OpenRouterService.sendMessageStream(
+        apiKey: _settingsProvider.apiKey,
+        model: model,
+        messages: apiMessages,
+      );
+
+      await for (final chunk in stream) {
+        aiMessage.content += chunk;
+        notifyListeners();
+      }
+
+      await _db.updateMessageContent(aiMessage.id, aiMessage.content);
+    } on OpenRouterException catch (e) {
+      _messages.remove(aiMessage);
+      await _db.deleteMessage(aiMessage.id);
+      await _insertErrorMessage(chatId, 'Error: ${e.message}');
+    } catch (e) {
+      _messages.remove(aiMessage);
+      await _db.deleteMessage(aiMessage.id);
+      await _insertErrorMessage(chatId, 'Connection error: $e');
+    } finally {
+      _isGenerating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _insertErrorMessage(String chatId, String content) async {
+    final msg = Message(
+      id: _uuid.v4(),
+      chatId: chatId,
+      role: 'assistant',
+      content: content,
+      createdAt: DateTime.now(),
+    );
+    await _db.insertMessage(msg);
+    _messages.add(msg);
   }
 
   Future<void> deleteMessage(String id) async {
@@ -158,6 +219,14 @@ class ChatProvider extends ChangeNotifier {
     _chats.clear();
     _currentChat = null;
     _messages = [];
+    notifyListeners();
+  }
+
+  void _showError(String message) {
+    if (_currentChat == null) {
+      createChat();
+    }
+    _insertErrorMessage(_currentChat!.id, message);
     notifyListeners();
   }
 

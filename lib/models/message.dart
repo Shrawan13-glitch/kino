@@ -4,7 +4,7 @@ class Message {
   final String id;
   final String chatId;
   final String role;
-  final String content;
+  String content;
   final DateTime createdAt;
   final Map<String, dynamic>? metadata;
 

@@ -8,11 +8,17 @@ import 'providers/settings_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DatabaseHelper.instance.database;
+
+  final settingsProvider = SettingsProvider();
+  await settingsProvider.initialize();
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ChatProvider()..initialize()),
-        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider.value(value: settingsProvider),
+        ChangeNotifierProvider(
+          create: (_) => ChatProvider(settingsProvider)..initialize(),
+        ),
       ],
       child: const ChatmorphismApp(),
     ),

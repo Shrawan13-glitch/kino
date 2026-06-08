@@ -6,6 +6,7 @@ import '../widgets/chat_input_bar.dart';
 import '../widgets/user_bubble.dart';
 import '../widgets/ai_response.dart';
 import '../widgets/typing_indicator.dart';
+import '../widgets/model_selector.dart';
 
 class ChatScreen extends StatefulWidget {
   final VoidCallback onMenuTap;
@@ -97,6 +98,17 @@ class _ChatScreenState extends State<ChatScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (provider.currentChat != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: ModelSelector(
+                    currentModelId: provider.currentChat?.model,
+                    onModelChanged: (modelId) {
+                      provider.setChatModel(modelId);
+                    },
+                  ),
+                ),
+              ],
               if (provider.currentChat != null)
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_horiz_rounded,
@@ -167,22 +179,23 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
               addAutomaticKeepAlives: false,
               addRepaintBoundaries: true,
-              itemCount: provider.messages.length +
-                  (provider.isGenerating ? 1 : 0),
+              itemCount: provider.messages.length,
               itemBuilder: (context, index) {
-                if (index == provider.messages.length &&
-                    provider.isGenerating) {
+                final message = provider.messages[index];
+                final isStreaming = provider.isGenerating &&
+                    index == provider.messages.length - 1 &&
+                    message.isAssistant;
+                final isLastMessage =
+                    index == provider.messages.length - 1;
+                final showAvatar =
+                    message.isAssistant && isLastMessage && !isStreaming;
+
+                if (isStreaming && message.content.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: TypingIndicator(),
                   );
                 }
-
-                final message = provider.messages[index];
-                final isLastMessage =
-                    index == provider.messages.length - 1;
-                final showAvatar =
-                    message.isAssistant && isLastMessage;
 
                 return Padding(
                   key: ValueKey(message.id),
@@ -231,6 +244,19 @@ class _ChatScreenState extends State<ChatScreen> {
                             ),
                           ),
                         AiResponse(content: message.content),
+                        if (isStreaming)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'generating...',
+                              style: TextStyle(
+                                color: AppColors.textSecondary(context)
+                                    .withValues(alpha: 0.5),
+                                fontSize: 11,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
                       ],
                     ],
                   ),
