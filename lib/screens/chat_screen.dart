@@ -222,7 +222,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     index == provider.messages.length - 1 &&
                     message.isAssistant;
 
-                if (isStreaming && message.content.isEmpty) {
+                if (isStreaming && message.content.isEmpty &&
+                    (message.reasoning == null || message.reasoning!.isEmpty)) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: TypingIndicator(),

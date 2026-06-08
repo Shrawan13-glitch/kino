@@ -5,7 +5,6 @@ import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
-import '../services/llm_provider.dart';
 import '../services/openrouter_provider.dart';
 import '../services/generation_manager.dart';
 import '../services/openrouter_service.dart';
@@ -284,13 +283,12 @@ class ChatProvider extends ChangeNotifier {
         aiMessage.reasoning = (aiMessage.reasoning ?? '') + thought;
         notifyListeners();
 
-      case GenToolCallStart(:final name, :final arguments):
+      case GenToolCallStart(:final id, :final name, :final arguments):
         aiMessage.toolCalls ??= [];
-        final detId = buildToolCallId(name, arguments);
-        final existing = aiMessage.toolCalls?.indexWhere((t) => t.id == detId);
+        final existing = aiMessage.toolCalls?.indexWhere((t) => t.id == id);
         if (existing == null || existing < 0) {
           aiMessage.toolCalls!.add(ToolCall(
-            id: detId,
+            id: id,
             name: name,
             arguments: arguments,
           ));
