@@ -32,6 +32,12 @@ class ChatProvider extends ChangeNotifier {
   String get _effectiveModel =>
       _currentChat?.model ?? _settingsProvider.defaultModel;
 
+  static final RegExp _toolTagRe =
+      RegExp(r'<tool\s+name="([^"]+)"\s+args="([^"]*)"\s*/>');
+  static final RegExp _toolMarkerRe = RegExp(r'\x00tool:(\d+)\x00');
+
+  static String _toolMarker(int idx) => '\x00tool:$idx\x00';
+
   int get approximateContextTokens {
     var total = 0;
     for (final m in _messages) {
@@ -53,20 +59,6 @@ class ChatProvider extends ChangeNotifier {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return n.toString();
-  }
-
-  String get systemPrompt {
-    return '''You are ChatMorphism, a helpful AI assistant with access to tools.
-
-When you need to use a tool, write your complete response first, then append tool calls at the end using this format:
-
-<tool name="websearch" args="your search query"/>
-
-Available tools:
-- websearch: Search the web using DuckDuckGo. args should be the search query.
-
-You can call multiple tools. Always put them at the end of your response.
-After tool results come back, continue your response naturally incorporating the results.''';
   }
 
   Future<void> initialize() async {
@@ -187,15 +179,18 @@ After tool results come back, continue your response naturally incorporating the
     await _generateResponse(chatId, model);
   }
 
+  String _contentForApi(String content) =>
+      content.replaceAll(_toolMarkerRe, '');
+
   List<Map<String, String>> _buildApiMessages(
       Message aiMessage, List<ToolCall> toolResults) {
     final list = <Map<String, String>>[
-      {'role': 'system', 'content': systemPrompt},
+      {'role': 'system', 'content': _settingsProvider.systemPrompt},
     ];
 
     for (final m in _messages) {
       if (m.id == aiMessage.id) continue;
-      list.add({'role': m.role, 'content': m.content});
+      list.add({'role': m.role, 'content': _contentForApi(m.content)});
     }
 
     if (toolResults.isNotEmpty) {
@@ -221,17 +216,19 @@ After tool results come back, continue your response naturally incorporating the
   }
 
   List<ToolCall> _parseToolCalls(String content) {
-    final regex =
-        RegExp(r'<tool\s+name="([^"]+)"\s+args="([^"]*)"\s*/>');
-    return regex.allMatches(content).map((m) => ToolCall(
+    return _toolTagRe.allMatches(content).map((m) => ToolCall(
           name: m.group(1)!,
           args: m.group(2)!,
         )).toList();
   }
 
-  String _stripToolTags(String content) {
-    return content.replaceAll(
-        RegExp(r'<tool\s+name="[^"]+"\s+args="[^"]*"\s*/>'), '');
+  String _replaceWithMarkers(String content, List<ToolCall> calls) {
+    int idx = 0;
+    return content.replaceAllMapped(_toolTagRe, (m) {
+      final replacement = _toolMarker(idx);
+      idx++;
+      return replacement;
+    });
   }
 
   Future<String> _executeTool(String name, String args) async {
@@ -285,7 +282,8 @@ After tool results come back, continue your response naturally incorporating the
 
         rounds++;
 
-        aiMessage.content = _stripToolTags(aiMessage.content.trim());
+        aiMessage.content =
+            _replaceWithMarkers(aiMessage.content.trim(), toolCalls);
         await _db.updateMessageContent(aiMessage.id, aiMessage.content);
 
         for (final tool in toolCalls) {

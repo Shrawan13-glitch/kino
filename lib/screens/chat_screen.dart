@@ -232,8 +232,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 }
 
-                final toolCalls = _extractToolCalls(message);
-
                 return Padding(
                   key: ValueKey(message.id),
                   padding: EdgeInsets.only(
@@ -280,12 +278,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               ],
                             ),
                           ),
-                        AiResponse(content: message.content),
-                        if (toolCalls.isNotEmpty)
-                          ...toolCalls.map((t) => Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: ToolCallCard(toolCall: t),
-                              )),
+                        ..._buildContentSegments(context, message),
                         if (isStreaming)
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
@@ -338,6 +331,46 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       },
     );
+  }
+
+  static final RegExp _markerRe = RegExp(r'\x00tool:(\d+)\x00');
+
+  List<Widget> _buildContentSegments(BuildContext context, Message message) {
+    final toolCalls = _extractToolCalls(message);
+    final content = message.content;
+
+    if (content.isEmpty) return [];
+    if (toolCalls.isEmpty) return [AiResponse(content: content)];
+
+    final segments = <Widget>[];
+    int lastEnd = 0;
+
+    for (final match in _markerRe.allMatches(content)) {
+      final textBefore = content.substring(lastEnd, match.start);
+      if (textBefore.isNotEmpty) {
+        segments.add(Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: AiResponse(content: textBefore),
+        ));
+      }
+
+      final idx = int.parse(match.group(1)!);
+      if (idx < toolCalls.length) {
+        segments.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: ToolCallCard(toolCall: toolCalls[idx]),
+        ));
+      }
+
+      lastEnd = match.end;
+    }
+
+    final textAfter = content.substring(lastEnd);
+    if (textAfter.isNotEmpty) {
+      segments.add(AiResponse(content: textAfter));
+    }
+
+    return segments;
   }
 
   List<ToolCall> _extractToolCalls(Message message) {

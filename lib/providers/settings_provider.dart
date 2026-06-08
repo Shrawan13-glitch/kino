@@ -9,6 +9,7 @@ class SettingsProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.dark;
   String _apiKey = '';
   String _defaultModel = '';
+  String _systemPrompt = defaultPrompt;
   List<String> _favoriteModelIds = [];
   List<AiModel> _availableModels = [];
   bool _modelsLoaded = false;
@@ -16,10 +17,28 @@ class SettingsProvider extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   String get apiKey => _apiKey;
   String get defaultModel => _defaultModel;
+  String get systemPrompt => _systemPrompt;
   List<String> get favoriteModelIds => _favoriteModelIds;
   List<AiModel> get availableModels => _availableModels;
   bool get modelsLoaded => _modelsLoaded;
   bool get hasApiKey => _apiKey.isNotEmpty;
+
+  static const String defaultPrompt = '''You are ChatMorphism, a helpful AI assistant with access to tools.
+
+Think before answering:
+1. Do I already know the answer based on my training data? If yes, answer directly.
+2. Does the question need current/latest information? If yes, use a tool.
+3. Is this something DuckDuckGo Instant Answer can handle (facts, definitions, quick lookups)?
+4. Only call tools when necessary — be efficient and resourceful.
+
+When you need a tool, write your thinking and response, then add the tool call at the end:
+
+<tool name="websearch" args="your search query"/>
+
+Available tools:
+- websearch: DuckDuckGo Instant Answer — good for quick facts, definitions, summaries, and recent info. Not a full web browser. Use specific queries.
+
+After tool results return, incorporate them naturally into your response. Call multiple tools if needed, but avoid redundant calls.''';
 
   List<AiModel> get favoriteModels {
     if (_favoriteModelIds.isEmpty) return [];
@@ -47,6 +66,8 @@ class SettingsProvider extends ChangeNotifier {
 
     _apiKey = (await _db.getSetting('api_key')) ?? '';
     _defaultModel = (await _db.getSetting('default_model')) ?? '';
+    _systemPrompt =
+        (await _db.getSetting('system_prompt')) ?? defaultPrompt;
 
     final favIds = await _db.getSetting('favorite_models');
     if (favIds != null && favIds.isNotEmpty) {
@@ -78,6 +99,12 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setDefaultModel(String modelId) async {
     _defaultModel = modelId;
     await _db.setSetting('default_model', modelId);
+    notifyListeners();
+  }
+
+  Future<void> setSystemPrompt(String prompt) async {
+    _systemPrompt = prompt;
+    await _db.setSetting('system_prompt', prompt);
     notifyListeners();
   }
 

@@ -14,21 +14,26 @@ class ModelsScreen extends StatefulWidget {
 
 class _ModelsScreenState extends State<ModelsScreen> {
   late TextEditingController _apiKeyController;
+  late TextEditingController _systemPromptController;
   bool _obscureKey = true;
   bool _isLoading = false;
   String? _error;
   String _searchQuery = '';
+  bool _promptExpanded = false;
 
   @override
   void initState() {
     super.initState();
     final settings = context.read<SettingsProvider>();
     _apiKeyController = TextEditingController(text: settings.apiKey);
+    _systemPromptController =
+        TextEditingController(text: settings.systemPrompt);
   }
 
   @override
   void dispose() {
     _apiKeyController.dispose();
+    _systemPromptController.dispose();
     super.dispose();
   }
 
@@ -108,6 +113,8 @@ class _ModelsScreenState extends State<ModelsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
               _buildApiKeySection(context, settings),
+              const SizedBox(height: 24),
+              _buildSystemPromptSection(context, settings),
               const SizedBox(height: 24),
               if (settings.hasApiKey) _buildModelsSection(context, settings),
             ],
@@ -233,6 +240,152 @@ class _ModelsScreenState extends State<ModelsScreen> {
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildSystemPromptSection(
+      BuildContext context, SettingsProvider settings) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _promptExpanded = !_promptExpanded),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Text(
+                  'SYSTEM PROMPT',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  _promptExpanded
+                      ? Icons.expand_less_rounded
+                      : Icons.expand_more_rounded,
+                  size: 18,
+                  color: AppColors.textSecondary(context),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          child: Column(
+            children: [
+              if (!_promptExpanded)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.description_outlined,
+                          size: 16,
+                          color: AppColors.textSecondary(context)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Edit the system prompt that controls model behavior and tool usage',
+                          style: TextStyle(
+                            color: AppColors.textSecondary(context),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_promptExpanded) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: TextField(
+                    controller: _systemPromptController,
+                    maxLines: 15,
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                      height: 1.5,
+                    ),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                Divider(height: 0.5, color: AppColors.border(context)),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: () {
+                            _systemPromptController.text =
+                                SettingsProvider.defaultPrompt;
+                            settings.setSystemPrompt(
+                                SettingsProvider.defaultPrompt);
+                          },
+                          icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                          label: const Text('Reset to default',
+                              style: TextStyle(fontSize: 12)),
+                          style: TextButton.styleFrom(
+                            foregroundColor:
+                                AppColors.textSecondary(context),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        height: 34,
+                        child: FilledButton(
+                          onPressed: () {
+                            settings.setSystemPrompt(
+                                _systemPromptController.text);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('System prompt updated'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text('Save',
+                              style: TextStyle(fontSize: 12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ],
     );
   }
