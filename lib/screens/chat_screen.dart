@@ -9,8 +9,7 @@ import '../widgets/user_bubble.dart';
 import '../widgets/ai_response.dart';
 import '../widgets/typing_indicator.dart';
 import '../widgets/model_selector.dart';
-import '../widgets/thinking_block.dart';
-import '../widgets/tool_call_block.dart';
+import '../widgets/work_thread.dart';
 import '../models/thread_entry.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -287,51 +286,34 @@ class _ChatScreenState extends State<ChatScreen> {
   List<Widget> _buildContentSegments(
       BuildContext context, Message message, bool isStreaming) {
     final segments = <Widget>[];
+    final workBuffer = <ThreadEntry>[];
+
+    void flushWork() {
+      if (workBuffer.isNotEmpty) {
+        segments.add(WorkThread(entries: List.from(workBuffer)));
+        workBuffer.clear();
+      }
+    }
 
     for (final entry in message.entries) {
       switch (entry) {
-        case ThinkingEntry(:final content, :final isStreaming):
-          segments.add(Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: ThinkingBlock(
-              content: content,
-              isStreaming: isStreaming,
-            ),
-          ));
+        case ThinkingEntry():
+          workBuffer.add(entry);
+
+        case ToolCallEntry():
+          workBuffer.add(entry);
 
         case TextEntry(:final content, :final isStreaming):
+          flushWork();
           if (content.isNotEmpty) {
-            segments.add(AiResponse(
-              content: content,
-              isStreaming: isStreaming,
+            segments.add(Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: AiResponse(content: content, isStreaming: isStreaming),
             ));
           }
-
-        case ToolCallEntry(
-            :final toolCallId,
-            :final toolName,
-            :final toolArguments,
-            :final completed,
-            :final error,
-            :final result,
-            :final isExecuting,
-          ):
-          segments.add(Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: ToolCallBlock(
-              toolCall: ToolCall(
-                id: toolCallId,
-                name: toolName,
-                arguments: toolArguments,
-                completed: completed,
-                error: error,
-                result: result,
-              ),
-              isStreaming: isExecuting,
-            ),
-          ));
       }
     }
+    flushWork();
 
     return segments;
   }

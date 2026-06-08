@@ -161,8 +161,9 @@ class GenerationManager {
             case ThoughtChunk(:final thought):
               controller.add(GenThoughtChunk(thought));
 
-            case ToolCallRequest(:final id, :final name, :final arguments):
-              controller.add(GenToolCallStart(id, name, arguments));
+            case ToolCallRequest():
+              // SSE preview — actual execution emits GenToolCallStart in ToolCallsRequest
+              break;
 
             case ToolCallsRequest(:final calls):
               hadToolCalls = true;
