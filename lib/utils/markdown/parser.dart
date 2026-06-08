@@ -99,14 +99,14 @@ bool _isParaLine(_Line l) => !l.isBlank && l.heading == null && !l.isThematicBre
 class _Line {
   final String content;
   late final bool isBlank = content.trim().isEmpty;
-  late final _FenceInfo? fence;
-  late final bool isThematicBreak;
-  late final (int, String)? heading;
-  late final int bqDepth;
-  late final String bqContent;
-  late final _ListMarker? listMarker;
-  late final List<String>? tableCells;
-  late final bool isTableSep;
+  _FenceInfo? fence;
+  bool isThematicBreak = false;
+  (int, String)? heading;
+  int bqDepth = 0;
+  String bqContent = '';
+  _ListMarker? listMarker;
+  List<String>? tableCells;
+  bool isTableSep = false;
 
   _Line(String raw) : content = raw { _classify(); }
 
