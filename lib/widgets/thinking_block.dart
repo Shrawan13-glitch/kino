@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../constants.dart';
+import '../utils/markdown/renderer.dart';
 
 class ThinkingBlock extends StatefulWidget {
   final String content;
@@ -162,65 +162,22 @@ class _ThinkingBlockState extends State<ThinkingBlock>
                             fontStyle: FontStyle.italic,
                           ),
                         )
-                      : MarkdownBody(
+                      : MarkdownRender(
                           data: widget.content,
-                          styleSheet: MarkdownStyleSheet(
-                      p: TextStyle(
-                        color: AppColors.textSecondary(context),
-                        fontSize: 12,
-                        height: 1.5,
-                        fontStyle: FontStyle.italic,
-                      ),
-                      strong: TextStyle(
-                        color: AppColors.textSecondary(context),
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      em: TextStyle(
-                        color: AppColors.textSecondary(context),
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                      ),
-                      code: TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 11,
-                        fontFamily: 'monospace',
-                        backgroundColor:
-                            AppColors.surfaceLight(context).withValues(alpha: 0.5),
-                      ),
-                      codeblockDecoration: BoxDecoration(
-                        color: AppColors.surfaceLight(context)
-                            .withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      codeblockPadding: const EdgeInsets.all(12),
-                      listBullet: TextStyle(
-                        color: AppColors.textSecondary(context),
-                        fontSize: 12,
-                      ),
-                      blockquoteDecoration: BoxDecoration(
-                        color: AppColors.textSecondary(context)
-                            .withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border(
-                          left: BorderSide(
-                            color: AppColors.textSecondary(context),
-                            width: 2,
+                          style: MarkdownStyle(
+                            textColor: AppColors.textSecondary(context),
+                            secondaryTextColor: AppColors.textSecondary(context),
+                            codeColor: AppColors.accent,
+                            codeBackground: AppColors.surfaceLight(context).withValues(alpha: 0.5),
+                            bodySize: 12,
+                            codeSize: 11,
+                            lineHeight: 1.5,
+                            blockquoteBar: AppColors.textSecondary(context),
+                            blockquoteBg: AppColors.textSecondary(context).withValues(alpha: 0.06),
+                            hrColor: AppColors.border(context).withValues(alpha: 0.3),
+                            checkboxBorder: AppColors.textSecondary(context).withValues(alpha: 0.4),
                           ),
                         ),
-                      ),
-                      blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                      horizontalRuleDecoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(
-                            color: AppColors.border(context).withValues(alpha: 0.3),
-                            width: 0.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
                 ),
             ],
           ),

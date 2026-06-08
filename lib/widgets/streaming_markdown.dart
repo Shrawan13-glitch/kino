@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import '../constants.dart';
+import '../utils/markdown/renderer.dart';
 
 class StreamingMarkdown extends StatefulWidget {
   final String content;
@@ -21,8 +20,6 @@ class _StreamingMarkdownState extends State<StreamingMarkdown>
     with SingleTickerProviderStateMixin {
   String _displayContent = '';
   Timer? _debounceTimer;
-
-
 
   bool _fading = false;
   int _front = 0;
@@ -125,16 +122,13 @@ class _StreamingMarkdownState extends State<StreamingMarkdown>
   Widget build(BuildContext context) {
     if (widget.content.isEmpty) return const SizedBox.shrink();
 
-    final theme = _buildTheme(context);
-
     Widget body;
     if (widget.isStreaming) {
-      body = _buildStreaming(theme);
+      body = _buildStreaming(context);
     } else {
-      body = MarkdownBody(
+      body = MarkdownRender(
         data: _displayContent,
         selectable: true,
-        styleSheet: theme,
       );
     }
 
@@ -161,7 +155,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown>
     );
   }
 
-  Widget _buildStreaming(MarkdownStyleSheet theme) {
+  Widget _buildStreaming(BuildContext context) {
     final bothNonEmpty = _buf0.isNotEmpty && _buf1.isNotEmpty;
     final doFade = _fading && bothNonEmpty;
 
@@ -176,130 +170,18 @@ class _StreamingMarkdownState extends State<StreamingMarkdown>
                 opacity: _front == 0
                     ? (doFade ? 1.0 - alpha : 1.0)
                     : (doFade ? alpha : 0.0),
-                child: MarkdownBody(data: _buf0, styleSheet: theme),
+                child: MarkdownRender(data: _buf0),
               ),
             if (_buf1.isNotEmpty)
               Opacity(
                 opacity: _front == 1
                     ? (doFade ? 1.0 - alpha : 1.0)
                     : (doFade ? alpha : 0.0),
-                child: MarkdownBody(data: _buf1, styleSheet: theme),
+                child: MarkdownRender(data: _buf1),
               ),
           ],
         );
       },
-    );
-  }
-
-  MarkdownStyleSheet _buildTheme(BuildContext context) {
-    final textPrimary = AppColors.textPrimary(context);
-    final textSecondary = AppColors.textSecondary(context);
-    final surfaceLight = AppColors.surfaceLight(context);
-    final border = AppColors.border(context);
-
-    return MarkdownStyleSheet(
-      h1: TextStyle(
-        color: textPrimary,
-        fontSize: 22,
-        fontWeight: FontWeight.w700,
-        height: 1.3,
-      ),
-      h2: TextStyle(
-        color: textPrimary,
-        fontSize: 19,
-        fontWeight: FontWeight.w700,
-        height: 1.3,
-      ),
-      h3: TextStyle(
-        color: textPrimary,
-        fontSize: 17,
-        fontWeight: FontWeight.w600,
-        height: 1.35,
-      ),
-      h4: TextStyle(
-        color: textPrimary,
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-        height: 1.4,
-      ),
-      h5: TextStyle(
-        color: textSecondary,
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        height: 1.4,
-      ),
-      h6: TextStyle(
-        color: textSecondary,
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        height: 1.4,
-      ),
-      p: TextStyle(
-        color: textPrimary,
-        fontSize: 15,
-        height: 1.65,
-      ),
-      strong: TextStyle(
-        fontWeight: FontWeight.w700,
-        color: textPrimary,
-      ),
-      em: TextStyle(
-        fontStyle: FontStyle.italic,
-        color: textSecondary,
-      ),
-      del: TextStyle(
-        decoration: TextDecoration.lineThrough,
-        color: textSecondary,
-      ),
-      code: TextStyle(
-        backgroundColor: Colors.transparent,
-        color: AppColors.accent,
-        fontSize: 13,
-        fontFamily: 'monospace',
-        height: 1.4,
-      ),
-      codeblockDecoration: BoxDecoration(
-        color: surfaceLight,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: border),
-      ),
-      codeblockPadding: const EdgeInsets.all(16),
-      blockquoteDecoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(8),
-        border: Border(
-          left: BorderSide(color: AppColors.primary, width: 3),
-        ),
-      ),
-      blockquotePadding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      listBullet: TextStyle(
-        color: AppColors.primary,
-        fontSize: 15,
-      ),
-      tableHead: TextStyle(
-        fontWeight: FontWeight.w600,
-        color: textPrimary,
-        fontSize: 14,
-      ),
-      tableBody: TextStyle(
-        color: textSecondary,
-        fontSize: 14,
-      ),
-      tableBorder: TableBorder.all(
-        color: border,
-        width: 0.5,
-      ),
-      tableCellsPadding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 8,
-      ),
-      tableColumnWidth: const FlexColumnWidth(),
-      horizontalRuleDecoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: border, width: 0.5),
-        ),
-      ),
-      checkbox: TextStyle(color: AppColors.primary),
     );
   }
 }
