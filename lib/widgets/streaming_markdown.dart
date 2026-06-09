@@ -57,17 +57,11 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
     return RepaintBoundary(
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.92,
-          ),
-          padding: const EdgeInsets.only(right: 24),
-          child: _wrapAntiShrink(
-            GptMarkdown(
-              _displayContent,
-              tableBuilder: tableWidget,
-              components: _components(context),
-            ),
+        child: _wrapAntiShrink(
+          GptMarkdown(
+            _displayContent,
+            tableBuilder: tableWidget,
+            components: _components(context),
           ),
         ),
       ),
