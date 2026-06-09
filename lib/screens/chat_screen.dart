@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants.dart';
@@ -24,6 +25,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showScrollButton = false;
+  Timer? _scrollDebounce;
 
   @override
   void initState() {
@@ -33,6 +35,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _scrollDebounce?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -183,11 +186,15 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildMessageList(BuildContext context) {
     return Consumer<ChatProvider>(
       builder: (context, provider, _) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            final maxScroll = _scrollController.position.maxScrollExtent;
-            final currentScroll = _scrollController.offset;
-            if (maxScroll - currentScroll < 150) {
+        _scrollDebounce?.cancel();
+        _scrollDebounce = Timer(const Duration(milliseconds: 80), () {
+          if (!_scrollController.hasClients) return;
+          final maxScroll = _scrollController.position.maxScrollExtent;
+          final currentScroll = _scrollController.offset;
+          if (maxScroll - currentScroll < 150) {
+            if (provider.isGenerating) {
+              _scrollController.jumpTo(maxScroll);
+            } else {
               _scrollController.animateTo(
                 maxScroll,
                 duration: const Duration(milliseconds: 200),

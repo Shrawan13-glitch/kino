@@ -14,15 +14,16 @@ Widget tableWidget(
   final textColor = ts.colorScheme.onSurface;
   final cols = rows.isEmpty ? 1 : rows.first.fields.length;
 
-  return Container(
-    width: double.infinity,
-    margin: const EdgeInsets.symmetric(vertical: 8),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: border),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: Table(
+  return SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Table(
       border: TableBorder(
         horizontalInside: BorderSide(color: border, width: 0.5),
         verticalInside: BorderSide(color: border, width: 0.5),
@@ -48,5 +49,6 @@ Widget tableWidget(
         );
       }).toList(),
     ),
+      ),
   );
 }

@@ -35,6 +35,10 @@ class ChatProvider extends ChangeNotifier {
   bool _isGenerating = false;
   bool _initialized = false;
 
+  Timer? _batchTimer;
+  StringBuffer _contentBuffer = StringBuffer();
+  StringBuffer _reasoningBuffer = StringBuffer();
+
   List<Chat> get chats => _chats;
   Chat? get currentChat => _currentChat;
   List<Message> get messages => _messages;
@@ -201,6 +205,8 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> _generateResponse(String chatId, String model) async {
     _isGenerating = true;
+    _contentBuffer = StringBuffer();
+    _reasoningBuffer = StringBuffer();
     notifyListeners();
 
     final aiMessage = Message(
@@ -229,9 +235,12 @@ class ChatProvider extends ChangeNotifier {
 
       stream.listen(
         (event) {
-          _handleGenerationEvent(event, aiMessage);
+          _queueGenerationEvent(event, aiMessage);
         },
         onDone: () async {
+          _batchTimer?.cancel();
+          _batchTimer = null;
+          notifyListeners();
           // Fallback: extract <think>/<thinking> tags from content for models
           // that don't use native reasoning_content
           if ((aiMessage.reasoning == null || aiMessage.reasoning!.isEmpty) &&
@@ -277,17 +286,38 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  void _queueGenerationEvent(GenerationEvent event, Message aiMessage) {
+    if (event is GenTextChunk || event is GenThoughtChunk) {
+      _applyGenerationEvent(event, aiMessage);
+      _batchTimer ??= Timer(const Duration(milliseconds: 50), () {
+        _batchTimer = null;
+        notifyListeners();
+      });
+      return;
+    }
+
+    _batchTimer?.cancel();
+    _batchTimer = null;
+    notifyListeners();
+    _handleGenerationEvent(event, aiMessage);
+  }
+
   void _handleGenerationEvent(GenerationEvent event, Message aiMessage) {
+    _applyGenerationEvent(event, aiMessage);
+    notifyListeners();
+  }
+
+  void _applyGenerationEvent(GenerationEvent event, Message aiMessage) {
     switch (event) {
       case GenTextChunk(:final text):
-        aiMessage.content += text;
+        _contentBuffer.write(text);
+        aiMessage.content = _contentBuffer.toString();
         _appendOrExtendEntry(aiMessage, TextEntry(text, isStreaming: true));
-        notifyListeners();
 
       case GenThoughtChunk(:final thought):
-        aiMessage.reasoning = (aiMessage.reasoning ?? '') + thought;
+        _reasoningBuffer.write(thought);
+        aiMessage.reasoning = _reasoningBuffer.toString();
         _appendOrExtendEntry(aiMessage, ThinkingEntry(thought, isStreaming: true));
-        notifyListeners();
 
       case GenToolCallStart(:final id, :final name, :final arguments):
         aiMessage.toolCalls ??= [];
@@ -308,7 +338,6 @@ class ChatProvider extends ChangeNotifier {
           toolArguments: arguments,
           isExecuting: true,
         ));
-        notifyListeners();
 
       case GenToolCallResult(:final id, :final success, :final result):
         final idx = aiMessage.toolCalls?.indexWhere((t) => t.id == id);
@@ -327,15 +356,13 @@ class ChatProvider extends ChangeNotifier {
             break;
           }
         }
-        notifyListeners();
 
       case GenUsage():
         break;
 
       case GenError(:final message):
-        aiMessage.content += '\n\nError: $message';
+        aiMessage.content = '${aiMessage.content}\n\nError: $message';
         aiMessage.entries.add(TextEntry('\n\nError: $message'));
-        notifyListeners();
 
       case GenDone():
         for (var i = 0; i < aiMessage.entries.length; i++) {
@@ -346,7 +373,6 @@ class ChatProvider extends ChangeNotifier {
             aiMessage.entries[i] = TextEntry(entry.content);
           }
         }
-        break;
 
       case GenTurnEnd():
         break;
