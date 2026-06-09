@@ -11,6 +11,7 @@ import '../widgets/ai_response.dart';
 import '../widgets/typing_indicator.dart';
 import '../widgets/model_selector.dart';
 import '../widgets/work_thread.dart';
+import '../widgets/message_actions.dart';
 import '../models/thread_entry.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -26,6 +27,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showScrollButton = false;
   Timer? _scrollDebounce;
+  final Map<String, GlobalKey> _messageKeys = {};
 
   @override
   void initState() {
@@ -214,6 +216,10 @@ class _ChatScreenState extends State<ChatScreen> {
           return _buildEmptyState(context);
         }
 
+        // Clean up stale message keys
+        _messageKeys.removeWhere((id, _) =>
+            !provider.messages.any((m) => m.id == id));
+
         return Stack(
           children: [
             ListView.builder(
@@ -224,6 +230,7 @@ class _ChatScreenState extends State<ChatScreen> {
               itemCount: provider.messages.length,
               itemBuilder: (context, index) {
                 final message = provider.messages[index];
+                final isAssistant = message.isAssistant;
                 final isStreaming = provider.isGenerating &&
                     index == provider.messages.length - 1 &&
                     message.isAssistant;
@@ -235,11 +242,16 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 }
 
+                final repaintKey = isAssistant
+                    ? _messageKeys.putIfAbsent(message.id, () => GlobalKey())
+                    : null;
+
                 return RepaintBoundary(
+                  key: repaintKey,
                   child: Padding(
                     key: ValueKey(message.id),
                     padding: EdgeInsets.only(
-                    bottom: message.isUser ? 12 : 16,
+                    bottom: message.isUser ? 12 : 24,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,6 +260,15 @@ class _ChatScreenState extends State<ChatScreen> {
                         UserBubble(text: message.content)
                       else ...[
                         ..._buildContentSegments(context, message, isStreaming),
+                        if (!isStreaming &&
+                            message.entries.any((e) => e is TextEntry) &&
+                            repaintKey != null)
+                          MessageActions(
+                            content: message.content,
+                            repaintKey: repaintKey,
+                            onRetry: () =>
+                                provider.retryFromMessage(message.id),
+                          ),
                       ],
                     ],
                   ),

@@ -602,6 +602,21 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> retryFromMessage(String messageId) async {
+    if (_currentChat == null) return;
+    cancelGeneration();
+
+    final idx = _messages.indexWhere((m) => m.id == messageId);
+    if (idx < 0) return;
+    if (!_messages[idx].isAssistant) return;
+
+    _messages.removeAt(idx);
+    await _db.deleteMessage(messageId);
+    notifyListeners();
+
+    await _generateResponse(_currentChat!.id, _effectiveModel);
+  }
+
   Future<void> clearAllChats() async {
     cancelGeneration();
     await _db.clearAll();
