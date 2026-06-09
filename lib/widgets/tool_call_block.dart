@@ -49,10 +49,10 @@ class _ToolCallBlockState extends State<ToolCallBlock> {
   }
 
   String _statusLabel() {
-    if (widget.toolCall.error) return 'failed';
-    if (widget.toolCall.completed) return 'done';
-    if (widget.isStreaming) return 'running...';
-    return 'pending';
+    if (widget.toolCall.error) return 'Failed';
+    if (widget.toolCall.completed) return 'Done';
+    if (widget.isStreaming) return 'Running...';
+    return 'Pending';
   }
 
   @override
@@ -109,24 +109,27 @@ class _ToolCallBlockState extends State<ToolCallBlock> {
           ),
           if (_expanded)
             Padding(
-              padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSection(
                     context,
-                    'args',
+                    'Arguments',
                     JsonEncoder.withIndent('  ')
                         .convert(widget.toolCall.arguments),
+                    Icons.settings_rounded,
                   ),
-                  if (widget.toolCall.result != null) ...[
-                    const SizedBox(height: 4),
+                  const SizedBox(height: 6),
+                  if (widget.toolCall.result != null)
                     _buildSection(
                       context,
-                      widget.toolCall.error ? 'error' : 'result',
+                      widget.toolCall.error ? 'Error' : 'Result',
                       widget.toolCall.result!,
+                      widget.toolCall.error
+                          ? Icons.error_outline_rounded
+                          : Icons.check_circle_outline_rounded,
                     ),
-                  ],
                 ],
               ),
             ),
@@ -136,38 +139,42 @@ class _ToolCallBlockState extends State<ToolCallBlock> {
   }
 
   Widget _buildSection(
-      BuildContext context, String label, String content) {
+      BuildContext context, String label, String content, IconData icon) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 2),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: AppColors.textSecondary(context).withValues(alpha: 0.5),
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
+        Row(
+          children: [
+            Icon(icon, size: 11, color: AppColors.textSecondary(context)),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textSecondary(context),
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+              ),
             ),
-          ),
+          ],
         ),
+        const SizedBox(height: 4),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(6),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.background(context).withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(4),
+            color: AppColors.background(context).withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
             content,
             style: TextStyle(
-                color: widget.toolCall.error
-                    ? AppColors.error
-                    : AppColors.textSecondary(context).withValues(alpha: 0.85),
-                fontSize: 12,
+              color: widget.toolCall.error
+                  ? AppColors.error
+                  : AppColors.textSecondary(context),
+              fontSize: 11,
               fontFamily: 'monospace',
-              height: 1.3,
+              height: 1.4,
             ),
             maxLines: 20,
             overflow: TextOverflow.ellipsis,

@@ -266,9 +266,30 @@ class _ModelsScreenState extends State<ModelsScreen> {
     final totalCount = settings.availableModels.length;
     final favCount = settings.favoriteModelIds.length;
 
+    final recommendedModel = settings.getModelById(SettingsProvider.recommendedModel);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (recommendedModel != null) ...[
+          Text(
+            'RECOMMENDED',
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _RecommendedTile(
+            model: recommendedModel,
+            isSelected: settings.isFavorite(recommendedModel.id) ||
+                settings.defaultModel == recommendedModel.id,
+            onTap: () => settings.toggleFavoriteModel(recommendedModel.id),
+          ),
+          const SizedBox(height: 20),
+        ],
         Row(
           children: [
             Text(
@@ -501,6 +522,123 @@ class _ModelTile extends StatelessWidget {
   }
 
   String _formatContext(int length) {
+    if (length >= 1000000) {
+      return '${(length / 1000000).toStringAsFixed(0)}M';
+    } else if (length >= 1000) {
+      return '${(length / 1000).toStringAsFixed(0)}K';
+    }
+    return length.toString();
+  }
+}
+
+class _RecommendedTile extends StatelessWidget {
+  final AiModel model;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _RecommendedTile({
+    required this.model,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : AppColors.surface(context),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.4)
+                : AppColors.border(context),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                isSelected ? Icons.check_circle_rounded : Icons.star_rounded,
+                color: AppColors.primary,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    model.displayName,
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        model.provider,
+                        style: TextStyle(
+                          color: AppColors.textSecondary(context),
+                          fontSize: 11,
+                        ),
+                      ),
+                      if (model.contextLength > 0) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          '${_RecommendedTile._formatContext(model.contextLength)} ctx',
+                          style: TextStyle(
+                            color: AppColors.textSecondary(context),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'recommended',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _formatContext(int length) {
     if (length >= 1000000) {
       return '${(length / 1000000).toStringAsFixed(0)}M';
     } else if (length >= 1000) {
