@@ -47,34 +47,22 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
   Widget build(BuildContext context) {
     if (_displayContent.isEmpty) return const SizedBox.shrink();
 
-    final ts = Theme.of(context);
-
-    Widget body;
-    if (widget.isStreaming) {
-      body = Text(
-        _displayContent,
-        style: TextStyle(
-          color: ts.colorScheme.onSurface,
-          fontSize: 15,
-          height: 1.65,
+    return RepaintBoundary(
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.92,
+          ),
+          padding: const EdgeInsets.only(right: 24),
+          child: _wrapAntiShrink(
+            GptMarkdown(
+              _displayContent,
+              tableBuilder: tableWidget,
+              components: _components(context),
+            ),
+          ),
         ),
-      );
-    } else {
-      body = GptMarkdown(
-        _displayContent,
-        tableBuilder: tableWidget,
-        components: _components(context),
-      );
-    }
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.92,
-        ),
-        padding: const EdgeInsets.only(right: 24),
-        child: _wrapAntiShrink(body),
       ),
     );
   }

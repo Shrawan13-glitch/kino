@@ -29,7 +29,7 @@ Widget tableWidget(
         verticalInside: BorderSide(color: border, width: 0.5),
       ),
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      columnWidths: {for (int i = 0; i < cols; i++) i: const MinColumnWidth(FlexColumnWidth(), FixedColumnWidth(300))},
+      columnWidths: {for (int i = 0; i < cols; i++) i: const FixedColumnWidth(280)},
       children: rows.map((row) {
         return TableRow(
           decoration: BoxDecoration(color: row.isHeader ? headerBg : null),
