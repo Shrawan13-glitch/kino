@@ -14,8 +14,48 @@ class WorkThread extends StatefulWidget {
   State<WorkThread> createState() => _WorkThreadState();
 }
 
-class _WorkThreadState extends State<WorkThread> {
+class _WorkThreadState extends State<WorkThread>
+    with SingleTickerProviderStateMixin {
   bool _masterExpanded = false;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulseAnimation = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(
+        parent: _pulseController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    if (widget.entries.any((e) => e.isStreaming)) {
+      _pulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(WorkThread old) {
+    super.didUpdateWidget(old);
+    final wasActive = old.entries.any((e) => e.isStreaming);
+    final isActive = widget.entries.any((e) => e.isStreaming);
+    if (isActive && !wasActive) {
+      _pulseController.repeat(reverse: true);
+    } else if (!isActive && wasActive) {
+      _pulseController.stop();
+      _pulseController.value = 1.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,13 +87,19 @@ class _WorkThreadState extends State<WorkThread> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              isActive ? 'working...' : 'thoughts + tools',
-              style: TextStyle(
-                color: AppColors.textSecondary(context).withValues(alpha: 0.5),
-                fontSize: 11,
-                fontStyle: FontStyle.italic,
-              ),
+            AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, _) {
+                final alpha = isActive ? _pulseAnimation.value : 0.5;
+                return Text(
+                  isActive ? 'working...' : 'thoughts + tools',
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context).withValues(alpha: alpha),
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                  ),
+                );
+              },
             ),
             if (total > 0) ...[
               const SizedBox(width: 4),
