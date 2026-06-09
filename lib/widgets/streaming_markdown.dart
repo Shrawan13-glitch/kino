@@ -44,16 +44,10 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
   }
 
   static String _preprocess(String text) {
-    return text
-        .replaceAll('<br>', '\n')
-        .replaceAll('<br/>', '\n')
-        .replaceAll('<br />', '\n')
-        .replaceAll('<BR>', '\n')
-        .replaceAll('</br>', '')
-        .replaceAllMapped(
-          RegExp(r'^-{3,}\s*$', multiLine: true),
-          (_) => '⸻',
-        );
+    return text.replaceAllMapped(
+      RegExp(r'^-{3,}\s*$', multiLine: true),
+      (_) => '⸻',
+    );
   }
 
   @override
