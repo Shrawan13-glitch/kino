@@ -67,6 +67,7 @@ class MessageActions extends StatelessWidget {
           as RenderRepaintBoundary?;
       if (boundary == null) return;
 
+      await WidgetsBinding.instance.endOfFrame;
       final image = await boundary.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;
