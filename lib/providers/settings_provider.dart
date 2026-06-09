@@ -110,10 +110,26 @@ Be thorough and thoughtful in your responses. Provide clear, well-structured ans
     notifyListeners();
   }
 
+  static const String recommendedModel = 'gpt-oss-120b:free';
+
   Future<void> setAvailableModels(List<AiModel> models) async {
     _availableModels = models;
     _modelsLoaded = true;
     await _db.setSetting('cached_models', jsonEncode(models.map((m) => m.toJson()).toList()));
+
+    if (_favoriteModelIds.isEmpty) {
+      final hasRecommended = models.any((m) => m.id == recommendedModel);
+      if (hasRecommended) {
+        _favoriteModelIds.add(recommendedModel);
+        await _db.setSetting('favorite_models', jsonEncode(_favoriteModelIds));
+      }
+    }
+
+    if (_defaultModel.isEmpty && _favoriteModelIds.isNotEmpty) {
+      _defaultModel = _favoriteModelIds.first;
+      await _db.setSetting('default_model', _defaultModel);
+    }
+
     notifyListeners();
   }
 
