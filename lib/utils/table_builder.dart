@@ -54,7 +54,7 @@ Widget tableWidget(
                 context,
                 content,
                 config,
-                false,
+                true,
               );
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
