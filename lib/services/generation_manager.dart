@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'llm_provider.dart';
 import '../utils/streaming_think_tag_parser.dart';
+import 'debug_service.dart';
 
 /// Callback invoked for each tool execution.
 /// Returns the tool result as a string.
@@ -85,6 +86,7 @@ class GenerationManager {
     required ToolExecutor executeTool,
     Map<String, dynamic>? reasoningConfig,
   }) {
+    DebugService.instance.info('GenManager.generate: model="$model" msgs=${baseMessages.length} tools=${toolDefinitions.length}');
     final controller = StreamController<GenerationEvent>();
     _cancelToken = CancellationToken();
     _isRunning = true;
@@ -102,6 +104,7 @@ class GenerationManager {
     ).whenComplete(() {
       _isRunning = false;
       controller.close();
+      DebugService.instance.info('GenManager: generation complete');
     });
 
     return controller.stream;
@@ -251,10 +254,13 @@ class GenerationManager {
         // If no tool calls were made, generation is done
         if (!hadToolCalls) {
           controller.add(GenDone('stop'));
+          DebugService.instance.info('GenManager: finished (no tool calls)');
           return;
         }
       }
-    } catch (e) {
+      DebugService.instance.info('GenManager: finished (tool calls done)');
+    } catch (e, s) {
+      DebugService.instance.error('GenManager: unexpected error', e, s);
       if (!cancelToken.isCancelled) {
         controller.add(GenError('Unexpected error: $e'));
       }

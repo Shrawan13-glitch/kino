@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../constants.dart';
 import '../providers/chat_provider.dart';
+import '../screens/debug_screen.dart';
 
 class Sidebar extends StatelessWidget {
   final VoidCallback onClose;
@@ -134,19 +135,42 @@ class Sidebar extends StatelessWidget {
   Widget _buildFooter(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: TextButton.icon(
-        onPressed: () {
-          Navigator.of(context).pushNamed('/settings');
-        },
-        icon: const Icon(Icons.settings_outlined, size: 20),
-        label: const Text('Settings'),
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.textSecondary(context),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+      child: Column(
+        children: [
+          TextButton.icon(
+            onPressed: () {
+              Navigator.of(context).pushNamed('/settings');
+            },
+            icon: const Icon(Icons.settings_outlined, size: 20),
+            label: const Text('Settings'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.textSecondary(context),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           ),
-        ),
+          TextButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DebugScreen()),
+              );
+            },
+            icon: Icon(Icons.bug_report_outlined,
+                size: 18, color: AppColors.textSecondary(context).withValues(alpha: 0.5)),
+            label: Text('Debug',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary(context).withValues(alpha: 0.5))),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

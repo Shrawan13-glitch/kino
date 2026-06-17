@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'llm_provider.dart';
+import 'debug_service.dart';
 
 /// OpenRouter implementation of [LlmProvider].
 ///
@@ -53,10 +54,12 @@ class OpenRouterProvider implements LlmProvider {
     CancellationToken? cancelToken,
     Duration timeout = const Duration(minutes: 5),
   }) async {
+    DebugService.instance.info('OpenRouter._startStreaming: model="$model" messages=${messages.length} tools=${tools?.length}');
     try {
       for (int attempt = 1; attempt <= _maxRetries; attempt++) {
         if (cancelToken?.isCancelled == true) return;
 
+        DebugService.instance.info('OpenRouter: attempt $attempt/$_maxRetries');
         final client = http.Client();
         try {
           final body = <String, dynamic>{
@@ -83,18 +86,22 @@ class OpenRouterProvider implements LlmProvider {
           });
           request.body = jsonEncode(body);
 
+          DebugService.instance.info('OpenRouter: sending request to $_baseUrl/chat/completions');
           final response = await client
               .send(request)
               .timeout(timeout);
 
+          DebugService.instance.info('OpenRouter: response status=${response.statusCode}');
           if (cancelToken?.isCancelled == true) return;
 
           if (response.statusCode == 401) {
+            DebugService.instance.error('OpenRouter: 401 Authentication failed');
             controller.add(StreamError('Authentication failed. Check your API key.'));
             return;
           }
 
           if (response.statusCode == 429 || response.statusCode >= 500) {
+            DebugService.instance.warn('OpenRouter: ${response.statusCode}, attempt $attempt/$_maxRetries');
             if (attempt < _maxRetries) {
               final delay = Duration(seconds: pow(2, attempt).toInt());
               controller.add(StreamError(
@@ -115,10 +122,12 @@ class OpenRouterProvider implements LlmProvider {
             final parsed = _tryDecode(responseBody);
             final errorMsg =
                 parsed?['error']?['message']?.toString() ?? 'Request failed (${response.statusCode})';
+            DebugService.instance.error('OpenRouter: non-200 response: $errorMsg');
             controller.add(StreamError(errorMsg));
             return;
           }
 
+          DebugService.instance.info('OpenRouter: connected, parsing SSE');
           // --- SSE parsing ---
           final toolCallAccumulators = <int, _ToolCallAccumulator2>{};
 
@@ -231,6 +240,7 @@ class OpenRouterProvider implements LlmProvider {
 
           return;
         } on TimeoutException {
+          DebugService.instance.warn('OpenRouter: timeout on attempt $attempt');
           if (attempt < _maxRetries) {
             controller.add(StreamError('Request timed out, retrying...', retryable: true));
             await Future.delayed(Duration(seconds: pow(2, attempt).toInt()));
@@ -238,7 +248,8 @@ class OpenRouterProvider implements LlmProvider {
           }
           controller.add(StreamError('Request timed out after $_maxRetries retries'));
           return;
-        } catch (e) {
+        } catch (e, s) {
+          DebugService.instance.error('OpenRouter: connection error', e, s);
           if (attempt < _maxRetries) {
             controller.add(StreamError('Connection error, retrying...', retryable: true));
             await Future.delayed(Duration(seconds: pow(2, attempt).toInt()));

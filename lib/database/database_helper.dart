@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
+import '../services/debug_service.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -22,7 +23,7 @@ class DatabaseHelper {
     final path = p.join(dir.path, fileName);
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -46,6 +47,7 @@ class DatabaseHelper {
         role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system')),
         content TEXT NOT NULL,
         created_at TEXT NOT NULL,
+        reasoning TEXT,
         metadata TEXT,
         FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
       )
@@ -72,6 +74,13 @@ class DatabaseHelper {
     if (oldVersion < 3) {
       await db.execute('ALTER TABLE messages ADD COLUMN reasoning TEXT');
     }
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE messages ADD COLUMN reasoning TEXT');
+      } catch (_) {
+        // Column already exists from the v3 migration above
+      }
+    }
   }
 
   Future<List<Chat>> getAllChats() async {
@@ -88,15 +97,26 @@ class DatabaseHelper {
   }
 
   Future<void> insertChat(Chat chat) async {
-    final db = await database;
-    await db.insert('chats', chat.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace);
+    try {
+      final db = await database;
+      await db.insert('chats', chat.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+      DebugService.instance.info('DB: chat inserted id=${chat.id}');
+    } catch (e, s) {
+      DebugService.instance.error('DB: insertChat failed', e, s);
+      rethrow;
+    }
   }
 
   Future<void> updateChat(Chat chat) async {
-    final db = await database;
-    await db.update('chats', chat.toMap(),
-        where: 'id = ?', whereArgs: [chat.id]);
+    try {
+      final db = await database;
+      await db.update('chats', chat.toMap(),
+          where: 'id = ?', whereArgs: [chat.id]);
+    } catch (e, s) {
+      DebugService.instance.error('DB: updateChat failed', e, s);
+      rethrow;
+    }
   }
 
   Future<void> deleteChat(String id) async {
@@ -106,18 +126,29 @@ class DatabaseHelper {
   }
 
   Future<List<Message>> getMessages(String chatId) async {
-    final db = await database;
-    final maps = await db.query('messages',
-        where: 'chat_id = ?',
-        whereArgs: [chatId],
-        orderBy: 'created_at ASC');
-    return maps.map((map) => Message.fromMap(map)).toList();
+    try {
+      final db = await database;
+      final maps = await db.query('messages',
+          where: 'chat_id = ?',
+          whereArgs: [chatId],
+          orderBy: 'created_at ASC');
+      return maps.map((map) => Message.fromMap(map)).toList();
+    } catch (e, s) {
+      DebugService.instance.error('DB: getMessages failed', e, s);
+      rethrow;
+    }
   }
 
   Future<void> insertMessage(Message message) async {
-    final db = await database;
-    await db.insert('messages', message.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace);
+    try {
+      final db = await database;
+      await db.insert('messages', message.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+      DebugService.instance.info('DB: message inserted id=${message.id}');
+    } catch (e, s) {
+      DebugService.instance.error('DB: insertMessage failed', e, s);
+      rethrow;
+    }
   }
 
   Future<void> deleteMessage(String id) async {

@@ -13,6 +13,7 @@ import '../services/search/search_service.dart';
 import '../services/search/webfetch_service.dart';
 import '../utils/content_parser.dart';
 import 'settings_provider.dart';
+import '../services/debug_service.dart';
 
 class ChatProvider extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
@@ -92,17 +93,17 @@ class ChatProvider extends ChangeNotifier {
       updatedAt: now,
       model: model ?? _settingsProvider.defaultModel,
     );
-
+    DebugService.instance.info('createChat: id=${chat.id} model=${chat.model}');
     _currentChat = chat;
     _messages = [];
     notifyListeners();
-
     return chat;
   }
 
   Future<void> selectChat(String id) async {
     if (_currentChat?.id == id) return;
 
+    DebugService.instance.info('selectChat: id=$id');
     cancelGeneration();
 
     _isLoading = true;
@@ -110,6 +111,7 @@ class ChatProvider extends ChangeNotifier {
 
     _currentChat = _chats.firstWhere((c) => c.id == id);
     _messages = await _db.getMessages(id);
+    DebugService.instance.info('selectChat: loaded ${_messages.length} messages');
     await _migrateLegacyMessages();
 
     _isLoading = false;
@@ -147,12 +149,15 @@ class ChatProvider extends ChangeNotifier {
   Future<void> sendMessage(String content) async {
     if (content.trim().isEmpty) return;
 
+    DebugService.instance.info('sendMessage: content="${content.trim()}" chat=${_currentChat?.id ?? 'null'}');
+
     // Cancel any ongoing generation before sending a new message
     if (_isGenerating) {
       cancelGeneration();
     }
 
     if (!_settingsProvider.hasApiKey) {
+      DebugService.instance.error('sendMessage: no API key configured');
       await _showError('No API key configured. Add one in Settings > Providers.');
       return;
     }
@@ -166,7 +171,10 @@ class ChatProvider extends ChangeNotifier {
     final now = DateTime.now();
     final model = _effectiveModel;
 
+    DebugService.instance.info('sendMessage: chatId=$chatId isDraft=$isDraft model="$model"');
+
     if (model.isEmpty) {
+      DebugService.instance.error('sendMessage: model is empty');
       await _showError('No model selected. Select one in Settings > Providers.');
       return;
     }
@@ -179,6 +187,7 @@ class ChatProvider extends ChangeNotifier {
           model: model,
         );
         await _db.insertChat(_currentChat!);
+        DebugService.instance.info('sendMessage: chat inserted title="${_currentChat!.title}"');
         _chats.insert(0, _currentChat!);
       }
 
@@ -190,7 +199,9 @@ class ChatProvider extends ChangeNotifier {
         createdAt: now,
       );
 
+      DebugService.instance.info('sendMessage: inserting userMessage id=${userMessage.id}');
       await _db.insertMessage(userMessage);
+      DebugService.instance.info('sendMessage: userMessage inserted');
       _messages.add(userMessage);
 
       if (!isDraft) {
@@ -201,13 +212,16 @@ class ChatProvider extends ChangeNotifier {
       }
 
       notifyListeners();
+      DebugService.instance.info('sendMessage: calling _generateResponse');
       await _generateResponse(chatId, model);
-    } catch (e) {
+    } catch (e, s) {
+      DebugService.instance.error('sendMessage: exception', e, s);
       await _showError('Failed to send message: $e');
     }
   }
 
   Future<void> _generateResponse(String chatId, String model) async {
+    DebugService.instance.info('_generateResponse: chatId=$chatId model="$model" messages=${_messages.length}');
     _isGenerating = true;
     _contentBuffer = StringBuffer();
     _reasoningBuffer = StringBuffer();
@@ -224,11 +238,13 @@ class ChatProvider extends ChangeNotifier {
     final toolDefinitions = _buildToolDefinitions();
     final baseMessages = _buildApiMessages();
 
+    DebugService.instance.info('_generateResponse: inserting aiMessage id=${aiMessage.id}');
     await _db.insertMessage(aiMessage);
     _messages.add(aiMessage);
     notifyListeners();
 
     try {
+      DebugService.instance.info('_generateResponse: calling _genManager.generate');
       final stream = _genManager.generate(
         provider: _provider,
         apiKey: _settingsProvider.apiKey,
@@ -240,9 +256,13 @@ class ChatProvider extends ChangeNotifier {
 
       stream.listen(
         (event) {
+          if (event is GenError) {
+            DebugService.instance.error('_generateResponse: GenError: ${event.message}');
+          }
           _queueGenerationEvent(event, aiMessage);
         },
         onDone: () async {
+          DebugService.instance.info('_generateResponse: stream done');
           _batchTimer?.cancel();
           _batchTimer = null;
           notifyListeners();
@@ -273,8 +293,10 @@ class ChatProvider extends ChangeNotifier {
 
           _isGenerating = false;
           notifyListeners();
+          DebugService.instance.info('_generateResponse: completed');
         },
         onError: (e) async {
+          DebugService.instance.error('_generateResponse: stream error', e);
           _messages.remove(aiMessage);
           await _db.deleteMessage(aiMessage.id);
           await _insertErrorMessage(chatId, 'Error: $e');
@@ -282,7 +304,8 @@ class ChatProvider extends ChangeNotifier {
           notifyListeners();
         },
       );
-    } catch (e) {
+    } catch (e, s) {
+      DebugService.instance.error('_generateResponse: exception', e, s);
       _messages.remove(aiMessage);
       await _db.deleteMessage(aiMessage.id);
       await _insertErrorMessage(chatId, 'Connection error: $e');
@@ -590,6 +613,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> _insertErrorMessage(String chatId, String content) async {
+    DebugService.instance.info('_insertErrorMessage: chatId=$chatId content="$content"');
     final msg = Message(
       id: _uuid.v4(),
       chatId: chatId,
@@ -597,8 +621,13 @@ class ChatProvider extends ChangeNotifier {
       content: content,
       createdAt: DateTime.now(),
     );
-    await _db.insertMessage(msg);
-    _messages.add(msg);
+    try {
+      await _db.insertMessage(msg);
+      _messages.add(msg);
+      DebugService.instance.info('_insertErrorMessage: done');
+    } catch (e, s) {
+      DebugService.instance.error('_insertErrorMessage: DB insert failed', e, s);
+    }
   }
 
   Future<void> deleteMessage(String id) async {
@@ -632,6 +661,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> _showError(String message) async {
+    DebugService.instance.error('_showError: $message');
     if (_currentChat == null) {
       await createChat();
     }
