@@ -30,10 +30,10 @@ class _DebugScreenState extends State<DebugScreen> {
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: AppColors.surface(context),
-        title: const Text('Debug Logs',
-            style: TextStyle(color: AppColors.textPrimary)),
+        title: Text('Debug Logs',
+            style: TextStyle(color: AppColors.textPrimary(context))),
         iconTheme:
-            const IconThemeData(color: AppColors.textSecondary),
+            IconThemeData(color: AppColors.textSecondary(context)),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline, color: AppColors.error),
@@ -104,10 +104,10 @@ class _DebugScreenState extends State<DebugScreen> {
                                   content: SingleChildScrollView(
                                     child: SelectableText(
                                       entry.stackTrace!,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 10,
                                         fontFamily: 'monospace',
-                                        color: AppColors.textPrimary,
+                                        color: AppColors.textPrimary(ctx),
                                       ),
                                     ),
                                   ),
