@@ -95,46 +95,54 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     
-    return Scaffold(
-      backgroundColor: AppColors.sidebarBg(context),
-      body: AnimatedBuilder(
-        animation: _sidebarController,
-        builder: (context, child) {
-          final progress = _sidebarController.value;
-          
-          return Stack(
-            children: [
-              // Sidebar (full width, always in the background)
-              Positioned.fill(
-                child: Sidebar(onClose: _closeSidebar),
-              ),
-              
-              // Chat screen that slides over the sidebar
-              Transform.translate(
-                offset: Offset(screenWidth * progress, 0),
-                child: GestureDetector(
-                  onHorizontalDragStart: _onHorizontalDragStart,
-                  onHorizontalDragUpdate: _onHorizontalDragUpdate,
-                  onHorizontalDragEnd: _onHorizontalDragEnd,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      boxShadow: progress > 0
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3 * progress),
-                                blurRadius: 20,
-                                offset: const Offset(-4, 0),
-                              ),
-                            ]
-                          : null,
+    return PopScope(
+      canPop: !_isSidebarOpen,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _isSidebarOpen) {
+          _closeSidebar();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.sidebarBg(context),
+        body: AnimatedBuilder(
+          animation: _sidebarController,
+          builder: (context, child) {
+            final progress = _sidebarController.value;
+            
+            return Stack(
+              children: [
+                // Sidebar (full width, always in the background)
+                Positioned.fill(
+                  child: Sidebar(onClose: _closeSidebar),
+                ),
+                
+                // Chat screen that slides over the sidebar
+                Transform.translate(
+                  offset: Offset(screenWidth * progress, 0),
+                  child: GestureDetector(
+                    onHorizontalDragStart: _onHorizontalDragStart,
+                    onHorizontalDragUpdate: _onHorizontalDragUpdate,
+                    onHorizontalDragEnd: _onHorizontalDragEnd,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        boxShadow: progress > 0
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.3 * progress),
+                                  blurRadius: 20,
+                                  offset: const Offset(-4, 0),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: ChatScreen(onMenuTap: _toggleSidebar),
                     ),
-                    child: ChatScreen(onMenuTap: _toggleSidebar),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
