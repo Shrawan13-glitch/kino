@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../constants.dart';
 import '../providers/chat_provider.dart';
+import '../providers/settings_provider.dart';
 
 class ChatInputBar extends StatefulWidget {
   const ChatInputBar({super.key});
@@ -44,9 +45,72 @@ class _ChatInputBarState extends State<ChatInputBar> {
     context.read<ChatProvider>().cancelGeneration();
   }
 
+  bool _isProviderConfigured(SettingsProvider settings) {
+    return settings.hasApiKey && settings.modelsLoaded && settings.favoriteModels.isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
     final isGenerating = context.watch<ChatProvider>().isGenerating;
+
+    if (!_isProviderConfigured(settings)) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+        decoration: BoxDecoration(
+          color: AppColors.background(context),
+          border: Border(
+            top: BorderSide(
+              color: AppColors.border(context).withValues(alpha: 0.3),
+              width: 0.5,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pushNamed('/models'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface(context),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.4),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.vpn_key_rounded,
+                            color: AppColors.primary, size: 18),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Set up a provider to start chatting',
+                            style: TextStyle(
+                              color: AppColors.textPrimary(context),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Icon(Icons.arrow_forward_ios_rounded,
+                            color: AppColors.textSecondary(context),
+                            size: 14),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),

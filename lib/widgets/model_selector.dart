@@ -227,7 +227,9 @@ class ModelSelector extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ).then((_) {
+      if (context.mounted) FocusScope.of(context).unfocus();
+    });
   }
 
   String _shortName(String name) {

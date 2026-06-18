@@ -78,7 +78,9 @@ class _ContextIndicatorState extends State<ContextIndicator> {
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (ctx) => const _ContextModal(),
-    );
+    ).then((_) {
+      if (context.mounted) FocusScope.of(context).unfocus();
+    });
 
     // Auto-close after 4 seconds
     _autoCloseTimer?.cancel();

@@ -542,8 +542,6 @@ class SettingsScreen extends StatelessWidget {
           _buildInfoTile(context, 'Version', '1.0.0'),
           Divider(height: 0.5, color: AppColors.border(context)),
           _buildInfoTile(context, 'App', 'Kino'),
-          Divider(height: 0.5, color: AppColors.border(context)),
-          _buildInfoTile(context, 'Database', 'SQLite (backup-ready)'),
         ],
       ),
     );

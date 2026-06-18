@@ -232,6 +232,24 @@ class _ModelsScreenState extends State<ModelsScreen> {
               ),
             ),
           ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Icon(Icons.info_outline,
+                size: 14,
+                color: AppColors.textSecondary(context).withValues(alpha: 0.6)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'You can get an API key from openrouter.ai',
+                style: TextStyle(
+                  color: AppColors.textSecondary(context).withValues(alpha: 0.6),
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -263,16 +281,39 @@ class _ModelsScreenState extends State<ModelsScreen> {
     }
 
     final filtered = _filteredModels(settings);
-    final totalCount = settings.availableModels.length;
     final favCount = settings.favoriteModelIds.length;
+
+    final freeModels = filtered.where((m) => m.isFree).toList();
+    final paidModels = filtered.where((m) => !m.isFree).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (freeModels.isNotEmpty && _searchQuery.isEmpty) ...[
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded,
+                  size: 16, color: AppColors.success),
+              const SizedBox(width: 6),
+              Text(
+                'FREE MODELS',
+                style: TextStyle(
+                  color: AppColors.success,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildModelList(context, settings, freeModels),
+          const SizedBox(height: 20),
+        ],
         Row(
           children: [
             Text(
-              'AVAILABLE MODELS',
+              'ALL MODELS',
               style: const TextStyle(
                 color: AppColors.primary,
                 fontSize: 13,
@@ -291,76 +332,92 @@ class _ModelsScreenState extends State<ModelsScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface(context),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border(context)),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: TextField(
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 13,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Search $totalCount models...',
-                    hintStyle: TextStyle(
-                      color: AppColors.textSecondary(context),
-                      fontSize: 13,
-                    ),
-                    prefixIcon: Icon(Icons.search_rounded,
-                        size: 20,
-                        color: AppColors.textSecondary(context)),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    isDense: true,
-                  ),
-                  onChanged: (v) => setState(() => _searchQuery = v),
-                ),
-              ),
-              Divider(height: 0.5, color: AppColors.border(context)),
-              if (filtered.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Text(
-                    'No models match your search',
-                    style: TextStyle(
-                      color: AppColors.textSecondary(context),
-                      fontSize: 13,
-                    ),
-                  ),
-                )
-              else
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 400),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, _) =>
-                        Divider(height: 0.5, color: AppColors.border(context)),
-                    itemBuilder: (context, index) {
-                      final model = filtered[index];
-                      final isFav = settings.isFavorite(model.id);
-                      final isDefault = settings.defaultModel == model.id;
-
-                      return _ModelTile(
-                        model: model,
-                        isFavorite: isFav,
-                        isDefault: isDefault,
-                        onToggle: () => settings.toggleFavoriteModel(model.id),
-                      );
-                    },
-                  ),
-                ),
-            ],
-          ),
-        ),
+        _buildModelList(context, settings, paidModels),
       ],
+    );
+  }
+
+  Widget _buildModelList(
+      BuildContext context, SettingsProvider settings, List<AiModel> models) {
+    if (models.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border(context)),
+        ),
+        child: Text(
+          'No models match your search',
+          style: TextStyle(
+            color: AppColors.textSecondary(context),
+            fontSize: 13,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: TextField(
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 13,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search models...',
+                hintStyle: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 13,
+                ),
+                prefixIcon: Icon(Icons.search_rounded,
+                    size: 20,
+                    color: AppColors.textSecondary(context)),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                isDense: true,
+              ),
+              onChanged: (v) => setState(() => _searchQuery = v),
+            ),
+          ),
+          Divider(height: 0.5, color: AppColors.border(context)),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 400),
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              itemCount: models.length,
+              separatorBuilder: (_, _) =>
+                  Divider(height: 0.5, color: AppColors.border(context)),
+              itemBuilder: (context, index) {
+                final model = models[index];
+                final isFav = settings.isFavorite(model.id);
+                final isDefault = settings.defaultModel == model.id;
+                final isRecommended =
+                    model.id == 'gpt-oss-120b:free' || model.id == 'gpt-oss-20b:free';
+
+                return _ModelTile(
+                  model: model,
+                  isFavorite: isFav,
+                  isDefault: isDefault,
+                  isRecommended: isRecommended,
+                  onToggle: () => settings.toggleFavoriteModel(model.id),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -369,12 +426,14 @@ class _ModelTile extends StatelessWidget {
   final AiModel model;
   final bool isFavorite;
   final bool isDefault;
+  final bool isRecommended;
   final VoidCallback onToggle;
 
   const _ModelTile({
     required this.model,
     required this.isFavorite,
     required this.isDefault,
+    required this.isRecommended,
     required this.onToggle,
   });
 
@@ -422,9 +481,27 @@ class _ModelTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (isDefault)
+                      if (isRecommended)
                         Container(
                           margin: const EdgeInsets.only(left: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'recommended',
+                            style: TextStyle(
+                              color: AppColors.success,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      if (isDefault)
+                        Container(
+                          margin: const EdgeInsets.only(left: 4),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 1),
                           decoration: BoxDecoration(

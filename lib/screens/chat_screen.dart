@@ -166,7 +166,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       padding: const EdgeInsets.only(right: 8),
                       child: ContextIndicator(contextInfo: provider.contextInfo),
                     ),
-                  if (provider.currentChat != null)
+                  if (provider.currentChat != null && provider.chats.any((c) => c.id == provider.currentChat!.id))
                     Container(
                       decoration: BoxDecoration(
                         color: AppColors.surfaceLight(context),
@@ -177,6 +177,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             color: AppColors.textPrimary(context), size: 20),
                         color: AppColors.surface(context),
                         elevation: 8,
+                        offset: const Offset(0, 40),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                           side: BorderSide(
@@ -453,7 +454,12 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildSuggestionChip(BuildContext context, String text) {
     return GestureDetector(
       onTap: () {
-        context.read<ChatProvider>().sendMessage(text);
+        final settings = context.read<SettingsProvider>();
+        if (settings.hasApiKey && settings.modelsLoaded && settings.favoriteModels.isNotEmpty) {
+          context.read<ChatProvider>().sendMessage(text);
+        } else {
+          Navigator.of(context).pushNamed('/models');
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -486,6 +492,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showDeleteConfirmation(BuildContext context) {
+    FocusScope.of(context).unfocus();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -517,6 +524,8 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-    );
+    ).then((_) {
+      if (context.mounted) FocusScope.of(context).unfocus();
+    });
   }
 }

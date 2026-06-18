@@ -6,6 +6,7 @@ import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/vfs_screen.dart';
 import 'screens/marketplace_screen.dart';
+import 'screens/models_screen.dart';
 
 class KinoApp extends StatelessWidget {
   const KinoApp({super.key});
@@ -25,6 +26,7 @@ class KinoApp extends StatelessWidget {
         '/settings': (context) => const SettingsScreen(),
         '/vfs': (context) => const VfsScreen(),
         '/marketplace': (context) => const MarketplaceScreen(),
+        '/models': (context) => const ModelsScreen(),
       },
     );
   }
