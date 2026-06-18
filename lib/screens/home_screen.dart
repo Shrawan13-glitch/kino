@@ -13,7 +13,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _sidebarController;
-  late Animation<Offset> _slideAnimation;
+  double _dragProgress = 0.0; // 0.0 = closed, 1.0 = open
   bool _isSidebarOpen = false;
 
   @override
@@ -21,15 +21,8 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     _sidebarController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(-1.0, 0.0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _sidebarController,
-      curve: Curves.easeOutCubic,
-    ));
   }
 
   @override
@@ -45,36 +38,103 @@ class _HomeScreenState extends State<HomeScreen>
     }
     
     if (_isSidebarOpen) {
-      _sidebarController.reverse();
+      _closeSidebar();
     } else {
-      _sidebarController.forward();
+      _openSidebar();
     }
-    setState(() => _isSidebarOpen = !_isSidebarOpen);
+  }
+
+  void _openSidebar() {
+    setState(() => _isSidebarOpen = true);
+    _sidebarController.animateTo(1.0, curve: Curves.easeOutCubic);
+  }
+
+  void _closeSidebar() {
+    setState(() => _isSidebarOpen = false);
+    _sidebarController.animateTo(0.0, curve: Curves.easeOutCubic);
+  }
+
+  void _onHorizontalDragStart(DragStartDetails details) {
+    // Close keyboard when starting to drag
+    FocusScope.of(context).unfocus();
+  }
+
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final delta = details.primaryDelta ?? 0;
+    
+    setState(() {
+      // Update drag progress based on finger movement
+      _dragProgress = (_sidebarController.value + (delta / screenWidth)).clamp(0.0, 1.0);
+      _sidebarController.value = _dragProgress;
+    });
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    
+    // Determine whether to open or close based on velocity and position
+    if (velocity.abs() > 300) {
+      // Fast swipe - use velocity direction
+      if (velocity > 0) {
+        _openSidebar();
+      } else {
+        _closeSidebar();
+      }
+    } else {
+      // Slow drag - use threshold
+      if (_sidebarController.value > 0.5) {
+        _openSidebar();
+      } else {
+        _closeSidebar();
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return Scaffold(
-      backgroundColor: AppColors.background(context),
-      body: Stack(
-        children: [
-          ChatScreen(onMenuTap: _toggleSidebar),
-          IgnorePointer(
-            ignoring: !_isSidebarOpen,
-            child: GestureDetector(
-              onTap: _toggleSidebar,
-              child: AnimatedOpacity(
-                opacity: _isSidebarOpen ? 0.4 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: Container(color: Colors.black),
+      backgroundColor: AppColors.sidebarBg(context),
+      body: AnimatedBuilder(
+        animation: _sidebarController,
+        builder: (context, child) {
+          final progress = _sidebarController.value;
+          
+          return Stack(
+            children: [
+              // Sidebar (full width, always in the background)
+              Positioned.fill(
+                child: Sidebar(onClose: _closeSidebar),
               ),
-            ),
-          ),
-          SlideTransition(
-            position: _slideAnimation,
-            child: Sidebar(onClose: _toggleSidebar),
-          ),
-        ],
+              
+              // Chat screen that slides over the sidebar
+              Transform.translate(
+                offset: Offset(screenWidth * progress, 0),
+                child: GestureDetector(
+                  onHorizontalDragStart: _onHorizontalDragStart,
+                  onHorizontalDragUpdate: _onHorizontalDragUpdate,
+                  onHorizontalDragEnd: _onHorizontalDragEnd,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: progress > 0
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3 * progress),
+                                blurRadius: 20,
+                                offset: const Offset(-4, 0),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: ChatScreen(onMenuTap: _toggleSidebar),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

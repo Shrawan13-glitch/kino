@@ -27,12 +27,9 @@ class _SidebarState extends State<Sidebar> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 340,
+      width: double.infinity, // Full width
       decoration: BoxDecoration(
         color: AppColors.sidebarBg(context),
-        border: Border(
-          right: BorderSide(color: AppColors.border(context), width: 0.5),
-        ),
       ),
       child: Column(
         children: [
