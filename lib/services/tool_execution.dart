@@ -47,7 +47,8 @@ class ToolExecutionService {
     if (vfsPath.startsWith('/')) {
       return '$_vfsRoot$vfsPath';
     }
-    return '$_vfsRoot/home/$vfsPath';
+    final clean = vfsPath.startsWith('home/') ? vfsPath.substring(5) : vfsPath;
+    return '$_vfsRoot/home/$clean';
   }
 
   Future<ToolResult> runTool(

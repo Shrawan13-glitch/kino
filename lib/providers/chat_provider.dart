@@ -536,7 +536,7 @@ class ChatProvider extends ChangeNotifier {
             'path': {
               'type': 'string',
               'description':
-                  'File path in VFS (e.g. "/home/notes/note.txt" or "scripts/analyze.py"). Relative paths are under /home/.',
+                  'File path in VFS (e.g. "/home/notes/note.txt" or "scripts/analyze.py" without any "home" prefix — it is added automatically). Always use paths WITHOUT /home/ prefix for relative paths.',
             },
             'content': {
               'type': 'string',

@@ -163,7 +163,11 @@ class VfsService {
 
     final parent = p.dirname(abs);
     final newAbs = p.join(parent, _sanitize(newName));
-    await File(abs).rename(newAbs);
+    if (entity == FileSystemEntityType.directory) {
+      await Directory(abs).rename(newAbs);
+    } else {
+      await File(abs).rename(newAbs);
+    }
   }
 
   Future<void> move(String srcVfsPath, String destVfsPath) async {
@@ -175,7 +179,11 @@ class VfsService {
       throw VfsNotFoundException(srcVfsPath);
     }
 
-    await File(srcAbs).rename(destAbs);
+    if (entity == FileSystemEntityType.directory) {
+      await Directory(srcAbs).rename(destAbs);
+    } else {
+      await File(srcAbs).rename(destAbs);
+    }
   }
 
   Future<void> copy(String srcVfsPath, String destVfsPath) async {

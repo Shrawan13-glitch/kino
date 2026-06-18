@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
 
 enum VfsNodeType { file, directory }
 
@@ -98,7 +99,7 @@ class VfsNode {
   factory VfsNode.fromEntity(FileSystemEntity entity, String vfsPath) {
     final stat = entity.statSync();
     return VfsNode(
-      name: entity.uri.pathSegments.last,
+      name: p.basename(entity.path),
       vfsPath: vfsPath,
       type: entity is Directory ? VfsNodeType.directory : VfsNodeType.file,
       size: stat.size,
