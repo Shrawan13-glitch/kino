@@ -6,6 +6,7 @@ import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/vfs_screen.dart';
 import 'screens/marketplace_screen.dart';
+import 'screens/splash_screen.dart';
 
 class KinoApp extends StatelessWidget {
   const KinoApp({super.key});
@@ -20,7 +21,7 @@ class KinoApp extends StatelessWidget {
       themeMode: settings.themeMode,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      home: const HomeScreen(),
+      home: const SplashScreen(),
       routes: {
         '/settings': (context) => const SettingsScreen(),
         '/vfs': (context) => const VfsScreen(),
