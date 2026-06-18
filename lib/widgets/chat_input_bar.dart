@@ -49,11 +49,14 @@ class _ChatInputBarState extends State<ChatInputBar> {
     final isGenerating = context.watch<ChatProvider>().isGenerating;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
       decoration: BoxDecoration(
         color: AppColors.background(context),
         border: Border(
-          top: BorderSide(color: AppColors.border(context), width: 0.5),
+          top: BorderSide(
+            color: AppColors.border(context).withValues(alpha: 0.3),
+            width: 0.5,
+          ),
         ),
       ),
       child: SafeArea(
@@ -63,17 +66,24 @@ class _ChatInputBarState extends State<ChatInputBar> {
           children: [
             Expanded(
               child: Container(
-                constraints: const BoxConstraints(maxHeight: 120),
+                constraints: const BoxConstraints(maxHeight: 140),
                 decoration: BoxDecoration(
-                  color: AppColors.inputBg(context),
-                  borderRadius: BorderRadius.circular(16),
+                  color: AppColors.surface(context),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.border(context),
-                    width: 1,
+                    color: AppColors.border(context).withValues(alpha: 0.5),
+                    width: 1.5,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -86,16 +96,18 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         style: TextStyle(
                           color: AppColors.textPrimary(context),
                           fontSize: 15,
-                          height: 1.4,
+                          height: 1.5,
+                          fontWeight: FontWeight.w500,
                         ),
                         decoration: InputDecoration(
                           hintText: 'Ask anything...',
                           hintStyle: TextStyle(
-                            color: AppColors.textSecondary(context),
+                            color: AppColors.textSecondary(context).withValues(alpha: 0.6),
+                            fontWeight: FontWeight.w400,
                           ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12,
+                            horizontal: 16, vertical: 14,
                           ),
                           isDense: true,
                         ),
@@ -104,61 +116,64 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     ),
                     if (_hasText && !isGenerating)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 4, right: 4),
+                        padding: const EdgeInsets.only(bottom: 6, right: 6),
                         child: IconButton(
                           onPressed: _send,
                           icon: Container(
-                            width: 36,
-                            height: 36,
+                            width: 40,
+                            height: 40,
                             decoration: const BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
                                   AppColors.bubbleGradientStart,
                                   AppColors.bubbleGradientEnd,
                                 ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              borderRadius: BorderRadius.all(Radius.circular(10)),
+                              borderRadius: BorderRadius.all(Radius.circular(12)),
                             ),
                             child: const Icon(
                               Icons.arrow_upward_rounded,
                               color: Colors.white,
-                              size: 20,
+                              size: 22,
                             ),
                           ),
                           splashRadius: 20,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(
-                            minWidth: 36,
-                            minHeight: 36,
+                            minWidth: 40,
+                            minHeight: 40,
                           ),
                         ),
                       ),
                     if (isGenerating)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 4, right: 4),
+                        padding: const EdgeInsets.only(bottom: 6, right: 6),
                         child: IconButton(
                           onPressed: _stop,
                           icon: Container(
-                            width: 36,
-                            height: 36,
+                            width: 40,
+                            height: 40,
                             decoration: BoxDecoration(
-                              color: AppColors.error.withValues(alpha: 0.2),
-                              borderRadius: const BorderRadius.all(Radius.circular(10)),
+                              color: AppColors.error.withValues(alpha: 0.15),
+                              borderRadius: const BorderRadius.all(Radius.circular(12)),
                               border: Border.all(
-                                color: AppColors.error.withValues(alpha: 0.4),
+                                color: AppColors.error.withValues(alpha: 0.5),
+                                width: 1.5,
                               ),
                             ),
                             child: const Icon(
                               Icons.stop_rounded,
                               color: AppColors.error,
-                              size: 20,
+                              size: 22,
                             ),
                           ),
                           splashRadius: 20,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(
-                            minWidth: 36,
-                            minHeight: 36,
+                            minWidth: 40,
+                            minHeight: 40,
                           ),
                         ),
                       ),

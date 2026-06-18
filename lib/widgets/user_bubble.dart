@@ -12,9 +12,9 @@ class UserBubble extends StatelessWidget {
       alignment: Alignment.centerRight,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [
@@ -25,16 +25,16 @@ class UserBubble extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(4),
-            bottomLeft: Radius.circular(20),
-            bottomRight: Radius.circular(20),
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(8),
+            bottomLeft: Radius.circular(24),
+            bottomRight: Radius.circular(24),
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: AppColors.primary.withValues(alpha: 0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -43,7 +43,9 @@ class UserBubble extends StatelessWidget {
           style: const TextStyle(
             color: Colors.white,
             fontSize: 15,
-            height: 1.4,
+            fontWeight: FontWeight.w500,
+            height: 1.5,
+            letterSpacing: 0.1,
           ),
         ),
       ),
