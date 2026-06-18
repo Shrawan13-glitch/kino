@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6C63FF"/>
+      <stop offset="100%" stop-color="#8B6FFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g transform="translate(256,256)">
+    <!-- Vertical stem -->
+    <line x1="-75" y1="-150" x2="-75" y2="150" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
+    <!-- Play triangle = upper arm of K + cinema symbol -->
+    <polygon points="-60,-10 -60,-90 145,-50" fill="#fff"/>
+    <!-- Lower diagonal -->
+    <line x1="-60" y1="20" x2="145" y2="150" stroke="#fff" stroke-width="28" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -9,7 +9,7 @@ class ToolRepositoryService {
   factory ToolRepositoryService() => _instance;
 
   static const String defaultRepoUrl =
-      'https://raw.githubusercontent.com/Shrawan13-glitch/chatmorphism-tools/main';
+      'https://raw.githubusercontent.com/Shrawan13-glitch/kino-tools/main';
 
   bool _loaded = false;
   String _repoUrl = defaultRepoUrl;
