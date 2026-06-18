@@ -5,7 +5,6 @@ import 'providers/settings_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/vfs_screen.dart';
-import 'screens/marketplace_screen.dart';
 import 'screens/models_screen.dart';
 
 class KinoApp extends StatelessWidget {
@@ -25,7 +24,6 @@ class KinoApp extends StatelessWidget {
       routes: {
         '/settings': (context) => const SettingsScreen(),
         '/vfs': (context) => const VfsScreen(),
-        '/marketplace': (context) => const MarketplaceScreen(),
         '/models': (context) => const ModelsScreen(),
       },
     );

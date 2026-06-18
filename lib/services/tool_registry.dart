@@ -1,44 +1,21 @@
 import 'package:flutter/foundation.dart';
 
-enum InstallType { binary, archive }
-
 class ToolDefinition {
   final String name;
   final String description;
   final String version;
-  final String downloadUrl;
-  final InstallType installType;
-  final String? archiveBinaryPath;
-  final Map<String, String>? extraPaths;
   final int size;
   final List<String> categories;
-  final bool isBuiltin;
   final Map<String, dynamic>? functionDefinition;
 
   const ToolDefinition({
     required this.name,
     required this.description,
     this.version = '1.0.0',
-    required this.downloadUrl,
-    this.installType = InstallType.binary,
-    this.archiveBinaryPath,
-    this.extraPaths,
     this.size = 0,
     this.categories = const [],
-    this.isBuiltin = true,
     this.functionDefinition,
   });
-
-  String get vfsPath => '/tools/$name';
-
-  String get sizeFormatted {
-    if (size < 1024) return '$size B';
-    if (size < 1024 * 1024) return '${(size / 1024).toStringAsFixed(1)} KB';
-    return '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-
-  String get installTypeLabel =>
-      installType == InstallType.binary ? 'Binary' : 'Archive';
 }
 
 class ToolRegistry extends ChangeNotifier {
@@ -47,28 +24,8 @@ class ToolRegistry extends ChangeNotifier {
   factory ToolRegistry() => _instance;
 
   final List<ToolDefinition> _tools = [];
-  final Set<String> _installed = {};
-  bool _loaded = false;
 
   List<ToolDefinition> get tools => List.unmodifiable(_tools);
-  List<ToolDefinition> get installed =>
-      _tools.where((t) => _installed.contains(t.name)).toList();
-  List<ToolDefinition> get available =>
-      _tools.where((t) => !_installed.contains(t.name)).toList();
-
-  bool get hasLoaded => _loaded;
-
-  bool isInstalled(String name) => _installed.contains(name);
-
-  void markInstalled(String name) {
-    _installed.add(name);
-    notifyListeners();
-  }
-
-  void markUninstalled(String name) {
-    _installed.remove(name);
-    notifyListeners();
-  }
 
   ToolDefinition? get(String name) {
     try {
@@ -76,22 +33,6 @@ class ToolRegistry extends ChangeNotifier {
     } catch (_) {
       return null;
     }
-  }
-
-  void loadFromRemote(List<ToolDefinition> tools) {
-    _tools
-      ..clear()
-      ..addAll(tools);
-    _loaded = true;
-    notifyListeners();
-  }
-
-  void loadBuiltins() {
-    _tools
-      ..clear()
-      ..addAll(builtinTools);
-    _loaded = false;
-    notifyListeners();
   }
 
   List<Map<String, dynamic>> getAgentToolDefinitions() {
@@ -117,81 +58,139 @@ class ToolRegistry extends ChangeNotifier {
     }).toList();
   }
 
-  List<ToolDefinition> get builtinTools => const [
-        ToolDefinition(
-          name: 'python3',
-          description:
-              'Python 3 interpreter for running scripts, data processing, automation, and more.',
-          version: '3.14.0',
-          downloadUrl:
-              'https://github.com/astral-sh/python-build-standalone/releases/download/20250106/cpython-3.14.0a3+20250106-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz',
-          installType: InstallType.archive,
-          archiveBinaryPath: 'python/bin/python3',
-          extraPaths: {
-            'python/lib': 'python_lib',
+  void init() {
+    _tools
+      ..clear()
+      ..addAll(builtinTools);
+    notifyListeners();
+  }
+
+  static const List<ToolDefinition> builtinTools = [
+    ToolDefinition(
+      name: 'jq',
+      description:
+          'JSON processor — query, filter, transform, and format JSON data. Supports field access (.key), array iteration ([]), filtering (select), projection ({a: .x}), sorting, grouping, piping (|), and more. Provide a filter expression and optional file path. Use -r for raw string output.',
+      version: '1.0.0',
+      categories: ['data', 'json'],
+      functionDefinition: {
+        'parameters': {
+          'type': 'object',
+          'properties': {
+            'args': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description':
+                  'Arguments: [options] <filter> [file]. Options: -r (raw output), -c (compact). Filter examples:\n'
+                  '  .key — get field\n'
+                  '  .[] | select(.age > 30) | .name — filter & extract\n'
+                  '  {name: .name, city: .address.city} — project fields\n'
+                  '  sort_by(.age) | .[] | .name — sort then extract\n'
+                  '  group_by(.city) — group by field\n'
+                  '  del(.password) — remove a key\n'
+                  '  keys — list object keys\n'
+                  '  length — array length',
+            },
           },
-          size: 26214400,
-          categories: ['runtime', 'scripting'],
-        ),
-        ToolDefinition(
-          name: 'ffmpeg',
-          description:
-              'Media processing toolkit for video/audio conversion, compression, editing, and analysis.',
-          version: '8.1.1',
-          downloadUrl:
-              'https://github.com/hzw1199/Android-FFmpeg-Prebuilt/releases/download/v8.1.1/ffmpeg-8.1.1-arm64-v8a.tar.gz',
-          installType: InstallType.archive,
-          archiveBinaryPath: 'ffmpeg-8.1.1-arm64-v8a/bin/ffmpeg',
-          extraPaths: {
-            'ffmpeg-8.1.1-arm64-v8a/bin': 'ffmpeg_bin',
+          'required': ['args'],
+        },
+      },
+    ),
+    ToolDefinition(
+      name: 'json',
+      description:
+          'Alias for jq — query, filter, and transform JSON data. Usage: json <filter> [file]. Provides all jq operations: field access, array iteration, select, projection, sort, group, pipe.',
+      categories: ['data', 'json'],
+      functionDefinition: {
+        'parameters': {
+          'type': 'object',
+          'properties': {
+            'args': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description':
+                  'Arguments: [options] <filter> [file]. Same as jq.',
+            },
           },
-          size: 8388608,
-          categories: ['media', 'conversion'],
-        ),
-        ToolDefinition(
-          name: 'rg',
-          description:
-              'ripgrep — recursively search directories for a regex pattern. Extremely fast.',
-          version: '14.1.0',
-          downloadUrl:
-              'https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/ripgrep-14.1.0-aarch64-unknown-linux-gnu.tar.gz',
-          installType: InstallType.archive,
-          archiveBinaryPath: 'ripgrep-14.1.0-aarch64-unknown-linux-gnu/rg',
-          size: 5242880,
-          categories: ['search', 'text'],
-        ),
-        ToolDefinition(
-          name: 'jq',
-          description:
-              'Command-line JSON processor — query, filter, and transform JSON data.',
-          version: '1.7.1',
-          downloadUrl:
-              'https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64',
-          installType: InstallType.binary,
-          size: 3145728,
-          categories: ['data', 'json'],
-        ),
-        ToolDefinition(
-          name: 'curl',
-          description:
-              'Transfer data from or to a server using HTTP, FTP, and more.',
-          version: '8.9.0',
-          downloadUrl:
-              'https://github.com/moparisthebest/static-curl/releases/download/v8.9.0/curl-aarch64',
-          installType: InstallType.binary,
-          size: 4194304,
-          categories: ['network', 'download'],
-        ),
-        ToolDefinition(
-          name: 'sqlite3',
-          description:
-              'Lightweight SQL database engine — query and manipulate SQLite databases.',
-          version: '3.46.0',
-          downloadUrl:
-              'https://github.com/nalgeon/sqlite/releases/download/3.46.0/sqlite3-linux-arm64',
-          installType: InstallType.binary,
-          size: 2097152,
-          categories: ['data', 'database'],
-        ),
-      ];
+          'required': ['args'],
+        },
+      },
+    ),
+    ToolDefinition(
+      name: 'rg',
+      description:
+          'Recursively search file contents with regex. Fast file search supporting globs, context lines, count-only, invert match, fixed strings, and case-insensitive modes.',
+      version: '1.0.0',
+      categories: ['search', 'text'],
+      functionDefinition: {
+        'parameters': {
+          'type': 'object',
+          'properties': {
+            'args': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description':
+                  'Arguments: [options] <pattern> [path]. Options:\n'
+                  '  -i — case-insensitive\n'
+                  '  -n — show line numbers (default)\n'
+                  '  -c — count matches per file\n'
+                  '  -l — list filenames only\n'
+                  '  -v — invert match\n'
+                  '  -F — fixed string (no regex)\n'
+                  '  -C N — show N context lines\n'
+                  '  -g GLOB — file glob filter (e.g. "*.dart")\n'
+                  '  --include-hidden — search dotfiles\n'
+                  '  --max-depth N — max recursion depth\n'
+                  '  --no-line-number — hide line numbers',
+            },
+          },
+          'required': ['args'],
+        },
+      },
+    ),
+    ToolDefinition(
+      name: 'search',
+      description:
+          'Alias for rg — recursive file content search with regex. See rg tool for usage.',
+      categories: ['search', 'text'],
+      functionDefinition: {
+        'parameters': {
+          'type': 'object',
+          'properties': {
+            'args': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description':
+                  'Arguments: [options] <pattern> [path]. Same as rg.',
+            },
+          },
+          'required': ['args'],
+        },
+      },
+    ),
+    ToolDefinition(
+      name: 'sqlite3',
+      description:
+          'Query SQLite databases. Execute SQL queries against a database file. Provide database path and SQL query. Results are returned as formatted text.',
+      version: '1.0.0',
+      categories: ['data', 'database'],
+      functionDefinition: {
+        'parameters': {
+          'type': 'object',
+          'properties': {
+            'args': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description':
+                  'Arguments: [database_path] <SQL query>\n'
+                  '  First positional arg: path to SQLite database file.\n'
+                  '  Remaining args: SQL query (e.g. "SELECT * FROM users").\n'
+                  '  If no database is specified, defaults to data.db.\n'
+                  '  Alternately, pass the SQL query via stdin.',
+            },
+          },
+          'required': ['args'],
+        },
+      },
+    ),
+  ];
 }

@@ -6,7 +6,6 @@ import 'providers/chat_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/vfs_provider.dart';
 import 'services/tool_registry.dart';
-import 'services/tool_repository_service.dart';
 import 'services/vfs/vfs_service.dart';
 
 void main() async {
@@ -20,8 +19,7 @@ void main() async {
   await vfsService.init();
 
   final toolRegistry = ToolRegistry();
-  final toolRepo = ToolRepositoryService();
-  toolRepo.loadIntoRegistry(toolRegistry);
+  toolRegistry.init();
 
   final vfsProvider = VfsProvider();
   await vfsProvider.init();
@@ -35,7 +33,6 @@ void main() async {
         ),
         ChangeNotifierProvider.value(value: vfsProvider),
         ChangeNotifierProvider.value(value: toolRegistry),
-        Provider.value(value: toolRepo),
       ],
       child: const KinoApp(),
     ),

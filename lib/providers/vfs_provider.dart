@@ -5,8 +5,6 @@ import 'package:path/path.dart' as p;
 import '../services/vfs/vfs_service.dart';
 import '../services/vfs/vfs_node.dart';
 import '../services/vfs/vfs_exception.dart';
-import '../services/tool_registry.dart';
-import '../services/tool_installer.dart';
 
 class BreadcrumbItem {
   final String path;
@@ -233,42 +231,6 @@ class VfsProvider extends ChangeNotifier {
       _showStatus('Shared: $name');
     } catch (e) {
       _error = 'Failed to share: $e';
-      notifyListeners();
-    }
-  }
-
-  Future<void> installTool(String toolName) async {
-    final registry = ToolRegistry();
-    final tool = registry.get(toolName);
-    if (tool == null) {
-      _error = 'Unknown tool: $toolName';
-      notifyListeners();
-      return;
-    }
-    if (tool.downloadUrl.isEmpty) {
-      _error = 'No download URL for $toolName';
-      notifyListeners();
-      return;
-    }
-
-    _showStatus('Installing ${tool.name}...');
-    try {
-      final installer = ToolInstaller();
-      final result = await installer.install(tool, onProgress: (status, progress) {
-        final pct = (progress * 100).toInt();
-        _showStatus('$status $pct%');
-      });
-
-      if (result.startsWith('Failed') || result.startsWith('Error')) {
-        _error = result;
-        notifyListeners();
-      } else {
-        registry.markInstalled(tool.name);
-        _showStatus('Installed: ${tool.name}');
-        await refresh();
-      }
-    } catch (e) {
-      _error = 'Failed to install ${tool.name}: $e';
       notifyListeners();
     }
   }

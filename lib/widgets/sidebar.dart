@@ -178,12 +178,6 @@ class _SidebarState extends State<Sidebar> {
         children: [
           _footerButton(
             context,
-            icon: Icons.store_outlined,
-            label: 'Marketplace',
-            onTap: () => Navigator.of(context).pushNamed('/marketplace'),
-          ),
-          _footerButton(
-            context,
             icon: Icons.folder_outlined,
             label: 'Files',
             onTap: () => Navigator.of(context).pushNamed('/vfs'),
