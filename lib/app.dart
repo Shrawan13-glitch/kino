@@ -4,6 +4,7 @@ import 'constants.dart';
 import 'providers/settings_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/vfs_screen.dart';
 
 class ChatmorphismApp extends StatelessWidget {
   const ChatmorphismApp({super.key});
@@ -21,6 +22,7 @@ class ChatmorphismApp extends StatelessWidget {
       home: const HomeScreen(),
       routes: {
         '/settings': (context) => const SettingsScreen(),
+        '/vfs': (context) => const VfsScreen(),
       },
     );
   }

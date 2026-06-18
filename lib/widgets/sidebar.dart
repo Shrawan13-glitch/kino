@@ -139,6 +139,20 @@ class Sidebar extends StatelessWidget {
         children: [
           TextButton.icon(
             onPressed: () {
+              Navigator.of(context).pushNamed('/vfs');
+            },
+            icon: const Icon(Icons.folder_outlined, size: 20),
+            label: const Text('Files'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.textSecondary(context),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () {
               Navigator.of(context).pushNamed('/settings');
             },
             icon: const Icon(Icons.settings_outlined, size: 20),

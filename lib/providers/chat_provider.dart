@@ -14,6 +14,7 @@ import '../services/search/webfetch_service.dart';
 import '../utils/content_parser.dart';
 import 'settings_provider.dart';
 import '../services/debug_service.dart';
+import '../services/tool_execution.dart';
 
 class ChatProvider extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
@@ -23,6 +24,7 @@ class ChatProvider extends ChangeNotifier {
   final GenerationManager _genManager = GenerationManager();
   late final SearchService _searchService;
   late final WebFetchService _webFetchService;
+  final ToolExecutionService _toolExec = ToolExecutionService();
 
   ChatProvider(this._settingsProvider) {
     _searchService = SearchService();
@@ -493,6 +495,118 @@ class ChatProvider extends ChangeNotifier {
           'required': ['url'],
         },
       ),
+      OpenRouterService.makeToolDefinition(
+        name: 'run_tool',
+        description:
+            'Execute a command-line tool from the VFS /tools/ directory. Use this to run Python scripts, process media with ffmpeg, search with ripgrep, query JSON with jq, etc. Returns stdout, stderr, and exit code. Console output is truncated at ~50KB; write large output to a file instead (e.g. python3 script.py > /home/output.txt).',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'tool': {
+              'type': 'string',
+              'description':
+                  'Name of the tool to run (e.g. "python3", "ffmpeg", "rg"). Tools are in /tools/. Use list_dir to see available tools.',
+            },
+            'args': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description': 'Command-line arguments to pass to the tool',
+            },
+            'stdin': {
+              'type': 'string',
+              'description':
+                  'Optional stdin input (useful for piping data into tools)',
+            },
+            'timeout': {
+              'type': 'integer',
+              'description': 'Timeout in seconds (default 30, max 120)',
+            },
+          },
+          'required': ['tool', 'args'],
+        },
+      ),
+      OpenRouterService.makeToolDefinition(
+        name: 'write_file',
+        description:
+            'Write content to a file in the VFS. Creates parent directories if needed. Use this to save scripts, notes, data, or any text content.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'path': {
+              'type': 'string',
+              'description':
+                  'File path in VFS (e.g. "/home/notes/note.txt" or "scripts/analyze.py"). Relative paths are under /home/.',
+            },
+            'content': {
+              'type': 'string',
+              'description': 'The text content to write to the file',
+            },
+          },
+          'required': ['path', 'content'],
+        },
+      ),
+      OpenRouterService.makeToolDefinition(
+        name: 'read_file',
+        description:
+            'Read the contents of a file from the VFS. Returns the file content as text. Large files over ~50KB are truncated; use run_tool with head or a Python script to process them in chunks.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'path': {
+              'type': 'string',
+              'description':
+                  'File path in VFS (e.g. "/home/notes/note.txt" or "scripts/analyze.py")',
+            },
+          },
+          'required': ['path'],
+        },
+      ),
+      OpenRouterService.makeToolDefinition(
+        name: 'list_dir',
+        description:
+            'List contents of a directory in the VFS. Shows files and directories with sizes. Use this to explore the VFS, find tools, browse user files, etc.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'path': {
+              'type': 'string',
+              'description':
+                  'Directory path in VFS (e.g. "/home", "/tools", "/home/notes"). Defaults to "/home".',
+            },
+          },
+          'required': [],
+        },
+      ),
+      OpenRouterService.makeToolDefinition(
+        name: 'delete_file',
+        description:
+            'Delete a file or directory from the VFS. Directories are deleted recursively.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'path': {
+              'type': 'string',
+              'description': 'Path of the file or directory to delete',
+            },
+          },
+          'required': ['path'],
+        },
+      ),
+      OpenRouterService.makeToolDefinition(
+        name: 'create_dir',
+        description:
+            'Create a directory in the VFS. Creates parent directories as needed.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'path': {
+              'type': 'string',
+              'description': 'Path of the directory to create',
+            },
+          },
+          'required': ['path'],
+        },
+      ),
     ];
   }
 
@@ -546,8 +660,58 @@ class ChatProvider extends ChangeNotifier {
         }
         return 'Content from $url:\n\n$content';
 
+      case 'run_tool':
+        final tool = arguments['tool'] as String?;
+        final args = (arguments['args'] as List?)?.cast<String>() ?? <String>[];
+        final stdin = arguments['stdin'] as String?;
+        final timeoutSec = arguments['timeout'] as int? ?? 30;
+        if (tool == null || tool.isEmpty) {
+          return 'Error: tool parameter is required for run_tool';
+        }
+        final result = await _toolExec.runTool(
+          tool,
+          args,
+          stdin: stdin,
+          timeout: Duration(seconds: timeoutSec.clamp(1, 120)),
+        );
+        return result.success ? result.stdout : result.full;
+
+      case 'write_file':
+        final path = arguments['path'] as String?;
+        final content = arguments['content'] as String?;
+        if (path == null || content == null) {
+          return 'Error: path and content parameters are required for write_file';
+        }
+        return await _toolExec.writeFile(path, content);
+
+      case 'read_file':
+        final path = arguments['path'] as String?;
+        if (path == null) {
+          return 'Error: path parameter is required for read_file';
+        }
+        return await _toolExec.readFile(path);
+
+      case 'list_dir':
+        final path = arguments['path'] as String? ?? '/home';
+        final listing = await _toolExec.listDirectory(path);
+        return 'Contents of $path:\n$listing';
+
+      case 'delete_file':
+        final path = arguments['path'] as String?;
+        if (path == null) {
+          return 'Error: path parameter is required for delete_file';
+        }
+        return await _toolExec.deleteFile(path);
+
+      case 'create_dir':
+        final path = arguments['path'] as String?;
+        if (path == null) {
+          return 'Error: path parameter is required for create_dir';
+        }
+        return await _toolExec.createDirectory(path);
+
       default:
-        return 'Unknown tool: $name. Available tools: web_search, fetch_url.';
+        return 'Unknown tool: $name. Available tools: web_search, fetch_url, run_tool, write_file, read_file, list_dir, delete_file, create_dir.';
     }
   }
 
