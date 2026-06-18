@@ -15,6 +15,7 @@ import '../utils/content_parser.dart';
 import 'settings_provider.dart';
 import '../services/debug_service.dart';
 import '../services/tool_execution.dart';
+import '../services/tool_registry.dart';
 
 class ChatProvider extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
@@ -464,7 +465,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> _buildToolDefinitions() {
-    return [
+    return <Map<String, dynamic>>[
       OpenRouterService.makeToolDefinition(
         name: 'web_search',
         description:
@@ -607,6 +608,7 @@ class ChatProvider extends ChangeNotifier {
           'required': ['path'],
         },
       ),
+      ...ToolRegistry().getAgentToolDefinitions(),
     ];
   }
 
@@ -711,6 +713,20 @@ class ChatProvider extends ChangeNotifier {
         return await _toolExec.createDirectory(path);
 
       default:
+        final registry = ToolRegistry();
+        final tool = registry.get(name);
+        if (tool != null) {
+          final args =
+              (arguments['args'] as List?)?.cast<String>() ?? <String>[];
+          final result = await _toolExec.runTool(
+            name,
+            args,
+            stdin: arguments['stdin'] as String?,
+            timeout: Duration(
+                seconds: (arguments['timeout'] as int? ?? 30).clamp(1, 120)),
+          );
+          return result.success ? result.stdout : result.full;
+        }
         return 'Unknown tool: $name. Available tools: web_search, fetch_url, run_tool, write_file, read_file, list_dir, delete_file, create_dir.';
     }
   }
