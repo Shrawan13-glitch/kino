@@ -37,7 +37,7 @@ void main() async {
         ChangeNotifierProvider.value(value: toolRegistry),
         Provider.value(value: toolRepo),
       ],
-      child: const ChatmorphismApp(),
+      child: const KinoApp(),
     ),
   );
 }

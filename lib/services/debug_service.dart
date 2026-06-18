@@ -53,7 +53,7 @@ class DebugService extends ChangeNotifier {
     }
     notifyListeners();
     // Also print to console
-    debugPrint('[ChatMorphism] [$level] $message');
+    debugPrint('[Kino] [$level] $message');
   }
 
   void clear() {

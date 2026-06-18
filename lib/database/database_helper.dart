@@ -14,7 +14,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('chatmorphism.db');
+    _database = await _initDB('kino.db');
     return _database!;
   }
 
@@ -205,7 +205,7 @@ class DatabaseHelper {
 
   Future<String> getDatabaseFilePath() async {
     final dir = await getApplicationDocumentsDirectory();
-    return p.join(dir.path, 'chatmorphism.db');
+    return p.join(dir.path, 'kino.db');
   }
 
   Future<void> clearAll() async {

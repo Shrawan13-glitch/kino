@@ -73,13 +73,13 @@ class MessageActions extends StatelessWidget {
       if (byteData == null) return;
 
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/chatmorphism_share.png');
+      final file = File('${dir.path}/kino_share.png');
       await file.writeAsBytes(byteData.buffer.asUint8List());
 
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path)],
-          text: 'Shared from ChatMorphism',
+          text: 'Shared from Kino',
         ),
       );
     } catch (e) {

@@ -59,7 +59,7 @@ class WikipediaEngine extends SearchEngine {
     });
 
     final response = await _client.get(url, headers: {
-      'User-Agent': 'ChatMorphism/1.0',
+      'User-Agent': 'Kino/1.0',
       'Accept': 'application/json',
     });
 
@@ -80,7 +80,7 @@ class WikipediaEngine extends SearchEngine {
   Future<SearchResult?> _getSummary(String title) async {
     final url = Uri.parse('$_restUrl/${Uri.encodeComponent(title)}');
     final response = await _client.get(url, headers: {
-      'User-Agent': 'ChatMorphism/1.0',
+      'User-Agent': 'Kino/1.0',
       'Accept': 'application/json',
     });
 

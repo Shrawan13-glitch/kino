@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:chatmorphism/app.dart';
-import 'package:chatmorphism/database/database_helper.dart';
-import 'package:chatmorphism/providers/chat_provider.dart';
-import 'package:chatmorphism/providers/settings_provider.dart';
+import 'package:kino/app.dart';
+import 'package:kino/database/database_helper.dart';
+import 'package:kino/providers/chat_provider.dart';
+import 'package:kino/providers/settings_provider.dart';
 
 void main() {
   testWidgets('App renders home screen', (WidgetTester tester) async {
@@ -20,10 +20,10 @@ void main() {
             create: (_) => ChatProvider(settings),
           ),
         ],
-        child: const ChatmorphismApp(),
+        child: const KinoApp(),
       ),
     );
 
-    expect(find.text('ChatMorphism'), findsOneWidget);
+    expect(find.text('Kino'), findsOneWidget);
   });
 }

@@ -29,7 +29,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get modelsLoaded => _modelsLoaded;
   bool get hasApiKey => _apiKey.isNotEmpty;
 
-  static const String defaultAppPrompt = '''You are ChatMorphism, a helpful AI assistant.
+  static const String defaultAppPrompt = '''You are Kino, a helpful AI assistant.
 
 Be thorough and thoughtful in your responses. Provide clear, well-structured answers using Markdown formatting when appropriate. Break down complex problems step by step.''';
 

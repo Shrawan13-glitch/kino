@@ -56,7 +56,7 @@ class _SidebarState extends State<Sidebar> {
                   color: AppColors.primary, size: 22),
               const SizedBox(width: 10),
               Text(
-                'ChatMorphism',
+                'Kino',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary(context),

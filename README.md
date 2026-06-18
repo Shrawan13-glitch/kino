@@ -8,7 +8,7 @@
   <br/>
   <br/>
 
-  <h1>✨ ChatMorphism</h1>
+  <h1>✨ Kino</h1>
   <p><strong>BYOK AI Chat — with on-device tool calling</strong></p>
   <p><em>Your keys. Your models. Your data. Agentic AI, entirely on your phone.</em></p>
 
@@ -136,8 +136,8 @@
 
 <pre>
 # Clone the repository
-git clone https://github.com/Shrawan13-glitch/chatmorphism.git
-cd chatmorphism
+git clone https://github.com/Shrawan13-glitch/kino.git
+cd kino
 
 # Install dependencies
 flutter pub get
@@ -161,7 +161,7 @@ flutter build apk --debug
 3. **Select a model** as your default, and optionally mark favorites.
 4. **Start chatting** — the model can invoke web search and URL fetching tools on-device.
 
-> **Note:** Your API key is stored locally in SQLite and never leaves your device. ChatMorphism does not collect any data.
+> **Note:** Your API key is stored locally in SQLite and never leaves your device. Kino does not collect any data.
 
 ---
 
@@ -268,7 +268,7 @@ Distributed under the **GNU General Public License v3.0**. See `LICENSE` for mor
   <p>
     Built with ❤️ for privacy-first, agentic AI on mobile.
     <br/>
-    <sub>ChatMorphism — Your AI, your keys, your device.</sub>
+    <sub>Kino — Your AI, your keys, your device.</sub>
   </p>
   <br/>
 </div>

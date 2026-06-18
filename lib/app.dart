@@ -7,15 +7,15 @@ import 'screens/settings_screen.dart';
 import 'screens/vfs_screen.dart';
 import 'screens/marketplace_screen.dart';
 
-class ChatmorphismApp extends StatelessWidget {
-  const ChatmorphismApp({super.key});
+class KinoApp extends StatelessWidget {
+  const KinoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
 
     return MaterialApp(
-      title: 'ChatMorphism',
+      title: 'Kino',
       debugShowCheckedModeBanner: false,
       themeMode: settings.themeMode,
       theme: AppTheme.lightTheme,

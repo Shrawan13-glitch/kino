@@ -60,6 +60,6 @@ jobs:
       - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: chatmorphism-debug-apk
+          name: kino-debug-apk
           path: build/app/outputs/flutter-apk/*-signed.apk
           if-no-files-found: error
