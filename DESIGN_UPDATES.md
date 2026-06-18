@@ -3,7 +3,47 @@
 ## Overview
 The chat screen has been redesigned with a focus on cleanliness, aesthetics, and professionalism while maintaining a simple, flat design.
 
-## Key Improvements
+## Latest Updates (Session 2)
+
+### 🎯 Context Indicator
+- **Circular Progress Widget**: Context usage shown as a circular progress indicator
+- **Color-coded Status**: 
+  - Green (< 50% used)
+  - Accent blue (50-75% used)  
+  - Red (> 75% used)
+- **Interactive**: Click to expand and see full context info
+- **Auto-close**: Expanded view automatically closes after 4 seconds
+- **Positioned**: Located in top-right of header
+
+### 📱 Header Improvements
+- **Centered Model Selector**: Model selector now centered in the app bar for better visual balance
+- **Enhanced Model Button**: 
+  - Larger with better padding (16px horizontal, 10px vertical)
+  - Gradient dot indicator
+  - Improved typography with letter spacing
+  - Better shadow and border styling
+  - Expand icon instead of swap icon
+- **Fade Effect**: Added gradient fade between header and chat area for smooth transition
+- **Subtle Border**: Reduced border opacity to 0.1 for cleaner look
+
+### 🎨 Visual Refinements
+- **Subtle Scroll Button**: 
+  - Reduced size (40px from 48px)
+  - Surface color with transparency instead of gradient
+  - Softer shadow (0.08 alpha)
+  - More minimal appearance
+- **Fade Transition**: 20px gradient fade at top of chat area prevents harsh line between header and messages
+
+### ⌨️ Keyboard Management
+- **Auto-close**: Keyboard automatically closes when sidebar opens for better UX
+
+### 🗑️ Code Cleanup
+- Removed unused `_buildContextBar` method
+- Context info now handled by dedicated `ContextIndicator` widget
+
+---
+
+## Previous Updates (Session 1)
 
 ### 🎨 Visual Design
 - **Cleaner Header**: More spacious with better padding and refined button containers
@@ -53,6 +93,10 @@ The chat screen has been redesigned with a focus on cleanliness, aesthetics, and
 - Increased padding for better touch targets
 - Improved text contrast and font weight
 
+### 🚀 Splash Screen
+- Removed animated splash screen for faster app startup
+- App now goes directly to home screen after Android native splash
+
 ## Design Principles Applied
 
 1. **Flat & Clean**: Removed unnecessary visual noise
@@ -60,12 +104,14 @@ The chat screen has been redesigned with a focus on cleanliness, aesthetics, and
 3. **Subtle Depth**: Shadows and gradients used sparingly for hierarchy
 4. **Professional Polish**: Refined details in borders, corners, and transitions
 5. **Better Contrast**: Improved readability through typography updates
+6. **Progressive Disclosure**: Context info hidden by default, revealed on demand
 
 ## Color Philosophy
 - Primary gradient (purple) reserved for interactive elements
-- Borders at 30-50% opacity for subtlety
-- Shadows with proper blur radius (12-16px) for depth
+- Borders at 10-50% opacity for subtlety (reduced from 30-50%)
+- Shadows with proper blur radius (8-16px) for depth
 - Surface colors for contained elements
+- Status colors for context indicator (green/blue/red)
 
 ## Result
-A modern, clean, and professional chat interface that feels premium while remaining simple and functional.
+A modern, clean, and professional chat interface that feels premium while remaining simple and functional. The centered model selector, circular context indicator, and fade effects create a polished, cohesive experience.

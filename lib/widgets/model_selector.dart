@@ -31,32 +31,57 @@ class ModelSelector extends StatelessWidget {
     return GestureDetector(
       onTap: () => _showModelPicker(context, settings),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.surfaceLight(context),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border(context)),
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.border(context).withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.bubbleGradientStart,
+                    AppColors.bubbleGradientEnd,
+                  ],
+                ),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 10),
             Flexible(
               child: Text(
                 _shortName(displayName),
                 style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary(context),
-                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 2),
+            const SizedBox(width: 8),
             Icon(
-              Icons.swap_horiz_rounded,
-              size: 14,
-              color: AppColors.textSecondary(context).withValues(alpha: 0.6),
+              Icons.expand_more_rounded,
+              size: 18,
+              color: AppColors.textSecondary(context),
             ),
           ],
         ),
@@ -201,7 +226,7 @@ class ModelSelector extends StatelessWidget {
   }
 
   String _shortName(String name) {
-    if (name.length <= 14) return name;
-    return '${name.substring(0, 12)}..';
+    if (name.length <= 20) return name;
+    return '${name.substring(0, 18)}..';
   }
 }

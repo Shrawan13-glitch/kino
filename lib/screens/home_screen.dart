@@ -39,6 +39,11 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _toggleSidebar() {
+    // Close keyboard when opening sidebar
+    if (!_isSidebarOpen) {
+      FocusScope.of(context).unfocus();
+    }
+    
     if (_isSidebarOpen) {
       _sidebarController.reverse();
     } else {
