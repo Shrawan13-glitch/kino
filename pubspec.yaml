@@ -41,7 +41,7 @@ dependencies:
   http: ^1.2.0
   share_plus: ^13.1.0
   archive: ^4.0.9
-  pdf: ^3.13.0
+  flutter_native_html_to_pdf: ^3.1.0
 
 dev_dependencies:
   flutter_test:

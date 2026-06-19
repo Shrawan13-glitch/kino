@@ -2,8 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
+import 'package:flutter_native_html_to_pdf/flutter_native_html_to_pdf.dart';
 import '../database/database_helper.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
@@ -631,20 +630,16 @@ class ChatProvider extends ChangeNotifier {
       OpenRouterService.makeToolDefinition(
         name: 'generate_pdf',
         description:
-            'Generate a PDF document from structured JSON data. Fast — renders in under a second. '
-            'Provide a JSON array where each element is a page (array of blocks). '
-            'Block types: {"t":"h1","c":"Title"}, {"t":"h2","c":"Heading"}, {"t":"p","c":"Paragraph"}, '
-            '{"t":"table","h":["H1","H2"],"r":[[...],[...]]}, {"t":"code","c":"code"}, '
-            '{"t":"list","items":["a","b"],"o":true}, {"t":"divider"}, {"t":"spacer","h":20}. '
-            'Set {"t":"page_break"} to force a new page mid-flow.',
+            'Generate a PDF document from HTML content. Renders HTML with full CSS support using native WebView. '
+            'Provide a full HTML page including <html>, <head>, and <body> tags. Uses CSS page-break for multi-page.',
         parameters: {
           'type': 'object',
           'properties': {
-            'data': {
+            'html': {
               'type': 'string',
               'description':
-                  'JSON string describing the document. Array of pages, each page is an array of block objects. '
-                  'First write the JSON to a file, then read it with read_file and pass the content here.',
+                  'Full HTML document content to render as PDF. Must include <!DOCTYPE html>, <html>, <head>, and <body> tags. '
+                  'Use CSS page-break-after: always for multi-page documents. Supports full CSS styling.',
             },
             'output': {
               'type': 'string',
@@ -652,7 +647,7 @@ class ChatProvider extends ChangeNotifier {
                   'Output PDF file path in VFS (e.g. "report.pdf" or "documents/report.pdf")',
             },
           },
-          'required': ['data', 'output'],
+          'required': ['html', 'output'],
         },
       ),
       ...ToolRegistry().getAgentToolDefinitions(),
@@ -760,40 +755,26 @@ class ChatProvider extends ChangeNotifier {
         return await _toolExec.createDirectory(path);
 
       case 'generate_pdf':
-        final dataJson = arguments['data'] as String?;
+        final html = arguments['html'] as String?;
         final output = arguments['output'] as String?;
-        if (dataJson == null || dataJson.isEmpty) {
-          return 'Error: data parameter is required for generate_pdf';
+        if (html == null || html.isEmpty) {
+          return 'Error: html parameter is required for generate_pdf';
         }
         if (output == null || output.isEmpty) {
           return 'Error: output path is required for generate_pdf';
         }
 
         try {
-          final pagesData = jsonDecode(dataJson) as List<dynamic>;
-          final doc = pw.Document();
+          final converter = HtmlToPdfConverter();
+          final pdfBytes = await converter.convertHtmlToPdfBytes(
+            html: html,
+            pageSize: PdfPageSize.a4,
+          );
 
-          for (final pageData in pagesData) {
-            final blocks = pageData as List<dynamic>;
-            doc.addPage(
-              pw.Page(
-                pageFormat: PdfPageFormat.a4,
-                margin: const pw.EdgeInsets.all(48),
-                build: (context) {
-                  return pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: _buildPdfBlocks(context, blocks),
-                  );
-                },
-              ),
-            );
-          }
-
-          final pdfBytes = await doc.save();
           final vfs = VfsService();
           await vfs.writeFile(output, pdfBytes);
 
-          return 'PDF generated successfully: $output (${pdfBytes.length} bytes, ${pagesData.length} pages)';
+          return 'PDF generated successfully: $output (${pdfBytes.length} bytes)';
         } catch (e) {
           return 'Error generating PDF: $e';
         }
@@ -938,97 +919,5 @@ class ChatProvider extends ChangeNotifier {
   String _truncateTitle(String text) {
     if (text.length <= 40) return text;
     return '${text.substring(0, 40)}...';
-  }
-
-  List<pw.Widget> _buildPdfBlocks(pw.Context context, List<dynamic> blocks) {
-    final widgets = <pw.Widget>[];
-    for (final block in blocks) {
-      final map = block as Map<String, dynamic>;
-      final type = map['t'] as String? ?? 'p';
-      final text = map['c'] as String? ?? '';
-
-      switch (type) {
-        case 'h1':
-          widgets.add(pw.Header(text: text, level: 0));
-        case 'h2':
-          widgets.add(pw.Header(text: text, level: 1));
-        case 'h3':
-          widgets.add(pw.Header(text: text, level: 2));
-        case 'p':
-          widgets.add(pw.Paragraph(text: text));
-        case 'table':
-          final headers = (map['h'] as List<dynamic>?)?.cast<String>() ?? [];
-          final rows = (map['r'] as List<dynamic>?)
-                  ?.map((r) => (r as List<dynamic>).cast<String>())
-                  .toList() ??
-              [];
-          final tableRows = <pw.TableRow>[];
-          if (headers.isNotEmpty) {
-            tableRows.add(pw.TableRow(
-              decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-              children: headers
-                  .map((h) => pw.Text(h,
-                      style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold, fontSize: 10)))
-                  .toList(),
-            ));
-          }
-          for (final row in rows) {
-            tableRows.add(pw.TableRow(
-              children: row.map((c) => pw.Text(c, style: const pw.TextStyle(fontSize: 10))).toList(),
-            ));
-          }
-          widgets.add(pw.Table(
-            border: pw.TableBorder.symmetric(
-              inside: const pw.BorderSide(width: 0.5),
-              outside: const pw.BorderSide(width: 0.5),
-            ),
-            children: tableRows,
-          ));
-          widgets.add(pw.SizedBox(height: 8));
-        case 'code':
-          widgets.add(pw.Container(
-            padding: const pw.EdgeInsets.all(10),
-            decoration: const pw.BoxDecoration(
-              color: PdfColors.grey100,
-            ),
-            child: pw.Text(text,
-                style: pw.TextStyle(
-                    font: pw.Font.courier(), fontSize: 9)),
-          ));
-          widgets.add(pw.SizedBox(height: 8));
-        case 'list':
-          final items = (map['items'] as List<dynamic>?)?.cast<String>() ?? [];
-          final ordered = map['o'] as bool? ?? false;
-          if (ordered) {
-            for (var i = 0; i < items.length; i++) {
-              widgets.add(pw.Row(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.SizedBox(
-                    width: 14,
-                    child: pw.Text('${i + 1}.',
-                        style: const pw.TextStyle(fontSize: 10)),
-                  ),
-                  pw.Expanded(
-                      child: pw.Paragraph(text: items[i])),
-                ],
-              ));
-            }
-          } else {
-            for (final item in items) {
-              widgets.add(pw.Bullet(text: item));
-            }
-          }
-        case 'divider':
-          widgets.add(pw.Divider());
-        case 'spacer':
-          final height = (map['h'] as num?)?.toDouble() ?? 10.0;
-          widgets.add(pw.SizedBox(height: height));
-        case 'page_break':
-          break;
-      }
-    }
-    return widgets;
   }
 }
