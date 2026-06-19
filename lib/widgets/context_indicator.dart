@@ -70,16 +70,16 @@ class _ContextIndicatorState extends State<ContextIndicator> {
   }
 
   void _showContextModal() {
-    // Close keyboard before opening modal
-    FocusScope.of(context).unfocus();
-    
+    final focusScope = FocusScope.of(context);
+    focusScope.unfocus();
+
     showDialog(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (ctx) => const _ContextModal(),
     ).then((_) {
-      if (context.mounted) FocusScope.of(context).unfocus();
+      focusScope.unfocus();
     });
 
     // Auto-close after 4 seconds

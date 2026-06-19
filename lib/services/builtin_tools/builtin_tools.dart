@@ -19,7 +19,7 @@ final Map<String, BuiltinHandler> builtinHandlers = {
   'json': _jsonTool,
   'rg': _searchTool,
   'search': _searchTool,
-  'sqlite3': _sqlTool,
+
 };
 
 String _vfsPath(String vfsPath) {
@@ -773,8 +773,8 @@ JqStep _parseArrayProject(String s) {
   var start = 0;
   for (var i = 0; i < inner.length; i++) {
     final c = inner[i];
-    if (c == '(' || c == '[' || c == '{') depth++;
-    else if (c == ')' || c == ']' || c == '}') depth--;
+    if (c == '(' || c == '[' || c == '{') { depth++; }
+    else if (c == ')' || c == ']' || c == '}') { depth--; }
     else if (c == ',' && depth == 0) {
       fields.add(inner.substring(start, i).trim());
       start = i + 1;
@@ -864,8 +864,8 @@ Future<ToolResult> _searchTool(
         // skip unknown flags
       } else if (pattern == null) {
         pattern = a;
-      } else if (path == null) {
-        path = a;
+      } else {
+        path ??= a;
       }
     }
 
@@ -949,8 +949,8 @@ Future<ToolResult> _searchTool(
             final isMatch = matchLines.contains(i);
             final prefix = lineNumbers
                 ? (isMatch
-                    ? '${relPath}:${i + 1}:'
-                    : '${relPath}-${i + 1}-')
+                    ? '$relPath:${i + 1}:'
+                    : '$relPath-${i + 1}-')
                 : (isMatch ? '$relPath:' : '$relPath-');
             results.add('$prefix${lines[i]}');
             lastShown = i;
@@ -1031,88 +1031,4 @@ bool _matchesGlob(String name, List<String> globs) {
   return false;
 }
 
-// ─── SQLite tool ─────────────────────────────────────────────
 
-Future<ToolResult> _sqlTool(
-  List<String> args, {
-  String? stdin,
-  String? workingDirectory,
-  Map<String, String>? environment,
-  Duration timeout = const Duration(seconds: 30),
-}) async {
-  try {
-    String? dbPath;
-    String? query;
-
-    for (var i = 0; i < args.length; i++) {
-      final a = args[i];
-      if (dbPath == null && !a.startsWith('-')) {
-        dbPath = a;
-      } else if (query == null && !a.startsWith('-')) {
-        query = a;
-      }
-    }
-
-    if (stdin != null && stdin.trim().isNotEmpty) {
-      query = stdin.trim();
-    }
-
-    if (dbPath == null) {
-      dbPath = p.join(VfsService().rootPath, 'home', 'data.db');
-    }
-
-    if (query == null || query.isEmpty) {
-      return ToolResult(
-        exitCode: 2,
-        stdout: '',
-        stderr: 'Usage: sqlite3 [database] <query>\n'
-            '  Provide the SQL query as an argument or via stdin.\n'
-            '  Default database: data.db in home directory.',
-      );
-    }
-
-    final fullPath = _vfsPath(dbPath);
-    final dbDir = Directory(p.dirname(fullPath));
-    if (!await dbDir.exists()) {
-      await dbDir.create(recursive: true);
-    }
-
-    // Use dart:io Process to run sqlite3 if available.
-    // Check if system sqlite3 is available
-    final whichResult = await Process.run(
-      Platform.isAndroid ? '/system/bin/sh' : 'which',
-      Platform.isAndroid ? ['-c', 'command -v sqlite3'] : ['sqlite3'],
-    );
-
-    if (whichResult.exitCode == 0) {
-      final sqliteBin = (whichResult.stdout as String).trim().split('\n').last.trim();
-      final result = await Process.run(
-        sqliteBin,
-        [fullPath, query],
-        workingDirectory: workingDirectory ?? p.dirname(fullPath),
-      );
-      return ToolResult(
-        exitCode: result.exitCode,
-        stdout: (result.stdout as String).trim(),
-        stderr: (result.stderr as String).trim(),
-      );
-    }
-
-    // Fallback: implement basic SQL using sqflite-like approach
-    // Since this is a Dart-native tool, we provide CSV/JSON-based data manipulation
-    // as a lightweight alternative when no sqlite3 binary is available.
-    return ToolResult(
-      exitCode: 0,
-      stdout: 'SQLite query received.\n'
-          'Database: $dbPath\n'
-          'Query: $query\n\n'
-          'No sqlite3 binary available. Install sqlite3 or use the "csv" tool for '
-          'data manipulation:\n'
-          '  csv --file <path> --query <expression>\n'
-          '  json --file <path> <query>',
-      stderr: '',
-    );
-  } catch (e) {
-    return ToolResult(exitCode: 1, stdout: '', stderr: 'sqlite3 error: $e');
-  }
-}

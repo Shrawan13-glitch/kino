@@ -5,7 +5,6 @@ import 'database/database_helper.dart';
 import 'providers/chat_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/vfs_provider.dart';
-import 'services/tool_registry.dart';
 import 'services/vfs/vfs_service.dart';
 
 void main() async {
@@ -18,9 +17,6 @@ void main() async {
   final vfsService = VfsService();
   await vfsService.init();
 
-  final toolRegistry = ToolRegistry();
-  toolRegistry.init();
-
   final vfsProvider = VfsProvider();
   await vfsProvider.init();
 
@@ -32,7 +28,6 @@ void main() async {
           create: (_) => ChatProvider(settingsProvider)..initialize(),
         ),
         ChangeNotifierProvider.value(value: vfsProvider),
-        ChangeNotifierProvider.value(value: toolRegistry),
       ],
       child: const KinoApp(),
     ),

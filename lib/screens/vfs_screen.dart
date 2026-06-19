@@ -267,8 +267,6 @@ class _VfsScreenState extends State<VfsScreen> {
       vfs.navigateTo(node.vfsPath);
     } else if (node.isTextFile) {
       _openTextFile(context, vfs, node);
-    } else if (node.name == 'ffmpeg') {
-      _showToolInfo(context, node);
     } else {
       vfs.share(node.name);
     }
@@ -391,77 +389,6 @@ class _VfsScreenState extends State<VfsScreen> {
     );
   }
 
-  void _showToolInfo(BuildContext context, VfsNode node) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface(context),
-        title: Row(
-          children: [
-            Icon(Icons.build_outlined, color: AppColors.primary, size: 22),
-            const SizedBox(width: 10),
-            Text(node.name,
-                style: TextStyle(color: AppColors.textPrimary(context))),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _infoRow(context, 'Type', 'Executable'),
-            _infoRow(context, 'Size', node.sizeFormatted),
-            _infoRow(context, 'Path', node.vfsPath),
-            if (node.name == 'ffmpeg') ...[
-              const SizedBox(height: 12),
-              Text(
-                'The agent can process media files in the VFS using ffmpeg.',
-                style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary(context)),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Close',
-                style: TextStyle(color: AppColors.textSecondary(context))),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoRow(BuildContext context, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 60,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary(context).withValues(alpha: 0.7),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textPrimary(context),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _FileTile extends StatelessWidget {

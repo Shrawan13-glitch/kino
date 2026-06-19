@@ -17,7 +17,6 @@ import '../utils/content_parser.dart';
 import 'settings_provider.dart';
 import '../services/debug_service.dart';
 import '../services/tool_execution.dart';
-import '../services/tool_registry.dart';
 
 class ChatProvider extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
@@ -518,14 +517,14 @@ class ChatProvider extends ChangeNotifier {
       OpenRouterService.makeToolDefinition(
         name: 'run_tool',
         description:
-            'Execute a command-line tool in the VFS. Use this to run scripts, process media with ffmpeg, search with ripgrep, query JSON with jq, etc. Returns stdout, stderr, and exit code. Console output is truncated at ~50KB; write large output to a file instead.',
+            'Execute a command-line tool in the VFS. Use this to run scripts, search with ripgrep, query JSON with jq, etc. Returns stdout, stderr, and exit code. Console output is truncated at ~50KB; write large output to a file instead.',
         parameters: {
           'type': 'object',
           'properties': {
             'tool': {
               'type': 'string',
               'description':
-                  'Name or path of the tool to run. Use absolute VFS path (e.g. "/ffmpeg") or just the name (looked up relative to VFS root).',
+                  'Name or path of the tool to run. Use absolute VFS path or just the name (looked up relative to VFS root).',
             },
             'args': {
               'type': 'array',
@@ -650,7 +649,93 @@ class ChatProvider extends ChangeNotifier {
           'required': ['html', 'output'],
         },
       ),
-      ...ToolRegistry().getAgentToolDefinitions(),
+      OpenRouterService.makeToolDefinition(
+        name: 'jq',
+        description:
+            'JSON processor — query, filter, transform, and format JSON data. Supports field access (.key), array iteration ([]), filtering (select), projection ({a: .x}), sorting, grouping, piping (|), and more. Provide a filter expression and optional file path. Use -r for raw string output.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'args': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description':
+                  'Arguments: [options] <filter> [file]. Options: -r (raw output), -c (compact). Filter examples:\n'
+                  '  .key — get field\n'
+                  '  .[] | select(.age > 30) | .name — filter & extract\n'
+                  '  {name: .name, city: .address.city} — project fields\n'
+                  '  sort_by(.age) | .[] | .name — sort then extract\n'
+                  '  group_by(.city) — group by field\n'
+                  '  del(.password) — remove a key\n'
+                  '  keys — list object keys\n'
+                  '  length — array length',
+            },
+          },
+          'required': ['args'],
+        },
+      ),
+      OpenRouterService.makeToolDefinition(
+        name: 'json',
+        description:
+            'Alias for jq — query, filter, and transform JSON data. Usage: json <filter> [file]. Provides all jq operations: field access, array iteration, select, projection, sort, group, pipe.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'args': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description':
+                  'Arguments: [options] <filter> [file]. Same as jq.',
+            },
+          },
+          'required': ['args'],
+        },
+      ),
+      OpenRouterService.makeToolDefinition(
+        name: 'rg',
+        description:
+            'Recursively search file contents with regex. Fast file search supporting globs, context lines, count-only, invert match, fixed strings, and case-insensitive modes.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'args': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description':
+                  'Arguments: [options] <pattern> [path]. Options:\n'
+                  '  -i — case-insensitive\n'
+                  '  -n — show line numbers (default)\n'
+                  '  -c — count matches per file\n'
+                  '  -l — list filenames only\n'
+                  '  -v — invert match\n'
+                  '  -F — fixed string (no regex)\n'
+                  '  -C N — show N context lines\n'
+                  '  -g GLOB — file glob filter (e.g. "*.dart")\n'
+                  '  --include-hidden — search dotfiles\n'
+                  '  --max-depth N — max recursion depth\n'
+                  '  --no-line-number — hide line numbers',
+            },
+          },
+          'required': ['args'],
+        },
+      ),
+      OpenRouterService.makeToolDefinition(
+        name: 'search',
+        description:
+            'Alias for rg — recursive file content search with regex. See rg tool for usage.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'args': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description':
+                  'Arguments: [options] <pattern> [path]. Same as rg.',
+            },
+          },
+          'required': ['args'],
+        },
+      ),
     ];
   }
 
@@ -781,21 +866,16 @@ class ChatProvider extends ChangeNotifier {
         }
 
       default:
-        final registry = ToolRegistry();
-        final tool = registry.get(name);
-        if (tool != null) {
-          final args =
-              (arguments['args'] as List?)?.cast<String>() ?? <String>[];
-          final result = await _toolExec.runTool(
-            name,
-            args,
-            stdin: arguments['stdin'] as String?,
-            timeout: Duration(
-                seconds: (arguments['timeout'] as int? ?? 30).clamp(1, 120)),
-          );
-          return result.success ? result.stdout : result.full;
-        }
-        return 'Unknown tool: $name. Available tools: web_search, fetch_url, run_tool, write_file, read_file, list_dir, delete_file, create_dir, generate_pdf.';
+        final args =
+            (arguments['args'] as List?)?.cast<String>() ?? <String>[];
+        final result = await _toolExec.runTool(
+          name,
+          args,
+          stdin: arguments['stdin'] as String?,
+          timeout: Duration(
+              seconds: (arguments['timeout'] as int? ?? 30).clamp(1, 120)),
+        );
+        return result.success ? result.stdout : result.full;
     }
   }
 
