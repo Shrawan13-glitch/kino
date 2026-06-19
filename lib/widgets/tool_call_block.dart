@@ -6,11 +6,13 @@ import '../models/message.dart' show ToolCall;
 class ToolCallBlock extends StatefulWidget {
   final ToolCall toolCall;
   final bool isStreaming;
+  final bool autoExpanded;
 
   const ToolCallBlock({
     super.key,
     required this.toolCall,
     this.isStreaming = false,
+    this.autoExpanded = false,
   });
 
   @override
@@ -26,6 +28,7 @@ class _ToolCallBlockState extends State<ToolCallBlock>
   @override
   void initState() {
     super.initState();
+    if (widget.autoExpanded) _expanded = true;
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -41,6 +44,11 @@ class _ToolCallBlockState extends State<ToolCallBlock>
   @override
   void didUpdateWidget(ToolCallBlock oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.autoExpanded && !oldWidget.autoExpanded) {
+      setState(() => _expanded = true);
+    } else if (!widget.autoExpanded && oldWidget.autoExpanded) {
+      setState(() => _expanded = false);
+    }
     if (widget.isStreaming && !oldWidget.isStreaming) {
       _pulseController.repeat(reverse: true);
     } else if (!widget.isStreaming && oldWidget.isStreaming) {

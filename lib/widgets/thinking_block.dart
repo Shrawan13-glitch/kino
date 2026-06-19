@@ -7,11 +7,13 @@ import '../utils/blockquote_component.dart';
 class ThinkingBlock extends StatefulWidget {
   final String content;
   final bool isStreaming;
+  final bool autoExpanded;
 
   const ThinkingBlock({
     super.key,
     required this.content,
     this.isStreaming = false,
+    this.autoExpanded = false,
   });
 
   @override
@@ -27,6 +29,7 @@ class _ThinkingBlockState extends State<ThinkingBlock>
   @override
   void initState() {
     super.initState();
+    if (widget.autoExpanded) _expanded = true;
     _glowController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
@@ -42,6 +45,11 @@ class _ThinkingBlockState extends State<ThinkingBlock>
   @override
   void didUpdateWidget(ThinkingBlock oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.autoExpanded && !oldWidget.autoExpanded) {
+      setState(() => _expanded = true);
+    } else if (!widget.autoExpanded && oldWidget.autoExpanded) {
+      setState(() => _expanded = false);
+    }
     if (widget.isStreaming && !oldWidget.isStreaming) {
       _glowController.repeat();
     } else if (!widget.isStreaming && oldWidget.isStreaming) {
@@ -205,7 +213,7 @@ class _ThinkingBlockState extends State<ThinkingBlock>
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 1),
               child: Text(
-                '·',
+                '\u00B7',
                 style: TextStyle(
                   color: AppColors.accent.withValues(alpha: active ? 0.8 : 0.3),
                   fontSize: 12,

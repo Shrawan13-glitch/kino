@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import '../utils/table_builder.dart';
 import '../utils/blockquote_component.dart';
+import 'bouncing_dots.dart';
 
 List<MarkdownComponent> _components(BuildContext context) {
   return [
@@ -46,25 +47,45 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
   static String _preprocess(String text) {
     return text.replaceAllMapped(
       RegExp(r'^-{3,}\s*$', multiLine: true),
-      (_) => '⸻',
+      (_) => '\u2E3B',
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_displayContent.isEmpty) return const SizedBox.shrink();
+    if (_displayContent.isEmpty && !widget.isStreaming) {
+      return const SizedBox.shrink();
+    }
 
-    return RepaintBoundary(
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: _wrapAntiShrink(
-          GptMarkdown(
-            _displayContent,
-            tableBuilder: tableWidget,
-            components: _components(context),
+    final children = <Widget>[];
+
+    if (_displayContent.isNotEmpty) {
+      children.add(
+        RepaintBoundary(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: _wrapAntiShrink(
+              GptMarkdown(
+                _displayContent,
+                tableBuilder: tableWidget,
+                components: _components(context),
+              ),
+            ),
           ),
         ),
-      ),
+      );
+    }
+
+    if (widget.isStreaming) {
+      children.add(const BouncingDots());
+    }
+
+    if (children.length == 1) return children.first;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: children,
     );
   }
 

@@ -43,6 +43,14 @@ class _WorkThreadState extends State<WorkThread> {
     }
   }
 
+  int? _findActiveEntryIndex() {
+    int? index;
+    for (int i = 0; i < widget.entries.length; i++) {
+      if (widget.entries[i].isStreaming) index = i;
+    }
+    return index;
+  }
+
   @override
   void dispose() {
     super.dispose();
@@ -54,13 +62,14 @@ class _WorkThreadState extends State<WorkThread> {
     final toolCount = widget.entries.whereType<ToolCallEntry>().length;
     final isActive = widget.entries.any((e) => e.isStreaming);
     final totalSteps = thinkingCount + toolCount;
+    final expanded = _masterExpanded || isActive;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildHeader(isActive, totalSteps),
-        if (_masterExpanded) ...[
+        _buildHeader(isActive, totalSteps, expanded),
+        if (expanded) ...[
           const SizedBox(height: 8),
           _buildTimeline(context),
         ],
@@ -68,7 +77,7 @@ class _WorkThreadState extends State<WorkThread> {
     );
   }
 
-  Widget _buildHeader(bool isActive, int totalSteps) {
+  Widget _buildHeader(bool isActive, int totalSteps, bool expanded) {
     return InkWell(
       onTap: () => setState(() => _masterExpanded = !_masterExpanded),
       child: Padding(
@@ -80,8 +89,8 @@ class _WorkThreadState extends State<WorkThread> {
               isActive
                   ? 'Working...'
                   : (_elapsedSeconds != null
-                      ? 'Worked ${_elapsedSeconds}s'
-                      : 'Work'),
+                      ? 'Done in ${_elapsedSeconds}s'
+                      : 'Done'),
               style: TextStyle(
                 color: isActive
                     ? AppColors.primary
@@ -104,7 +113,7 @@ class _WorkThreadState extends State<WorkThread> {
             const SizedBox(width: 4),
             AnimatedRotation(
               duration: const Duration(milliseconds: 200),
-              turns: _masterExpanded ? 0.5 : 0,
+              turns: expanded ? 0.5 : 0,
               child: Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: 16,
@@ -119,6 +128,8 @@ class _WorkThreadState extends State<WorkThread> {
 
   Widget _buildTimeline(BuildContext context) {
     final entries = widget.entries;
+    final activeIndex = _findActiveEntryIndex();
+
     return Container(
       padding: const EdgeInsets.only(left: 12),
       decoration: BoxDecoration(
@@ -139,19 +150,21 @@ class _WorkThreadState extends State<WorkThread> {
                 top: i == 0 ? 0 : 4,
                 bottom: i == entries.length - 1 ? 0 : 4,
               ),
-              child: _buildEntryContent(entries[i]),
+              child: _buildEntryContent(entries[i],
+                  isActiveEntry: i == activeIndex),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildEntryContent(ThreadEntry entry) {
+  Widget _buildEntryContent(ThreadEntry entry, {bool isActiveEntry = false}) {
     switch (entry) {
       case ThinkingEntry(:final content, :final isStreaming):
         return ThinkingBlock(
           content: content,
           isStreaming: isStreaming,
+          autoExpanded: isActiveEntry,
         );
 
       case ToolCallEntry(
@@ -173,6 +186,7 @@ class _WorkThreadState extends State<WorkThread> {
             result: result,
           ),
           isStreaming: isExecuting,
+          autoExpanded: isActiveEntry,
         );
 
       default:
