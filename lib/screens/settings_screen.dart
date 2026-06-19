@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../constants.dart';
 import '../providers/settings_provider.dart';
 import '../providers/chat_provider.dart';
@@ -539,7 +540,14 @@ class SettingsScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildInfoTile(context, 'Version', '1.0.0'),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              final version = snapshot.data?.version ?? '?';
+              final build = snapshot.data?.buildNumber ?? '?';
+              return _buildInfoTile(context, 'Version', '$version+$build');
+            },
+          ),
           Divider(height: 0.5, color: AppColors.border(context)),
           _buildInfoTile(context, 'App', 'Kino'),
         ],
