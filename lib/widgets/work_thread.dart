@@ -14,110 +14,75 @@ class WorkThread extends StatefulWidget {
   State<WorkThread> createState() => _WorkThreadState();
 }
 
-class _WorkThreadState extends State<WorkThread>
-    with SingleTickerProviderStateMixin {
+class _WorkThreadState extends State<WorkThread> {
   bool _masterExpanded = false;
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _pulseAnimation = Tween<double>(begin: 0.3, end: 0.7).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    if (widget.entries.any((e) => e.isStreaming)) {
-      _pulseController.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void didUpdateWidget(WorkThread old) {
-    super.didUpdateWidget(old);
-    final wasActive = old.entries.any((e) => e.isStreaming);
-    final isActive = widget.entries.any((e) => e.isStreaming);
-    if (isActive && !wasActive) {
-      _pulseController.repeat(reverse: true);
-    } else if (!isActive && wasActive) {
-      _pulseController.stop();
-      _pulseController.value = 1.0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
-    final thinkingCount =
-        widget.entries.whereType<ThinkingEntry>().length;
+    final thinkingCount = widget.entries.whereType<ThinkingEntry>().length;
     final toolCount = widget.entries.whereType<ToolCallEntry>().length;
     final isActive = widget.entries.any((e) => e.isStreaming);
-    final total = thinkingCount + toolCount;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildHeader(isActive, total),
-          if (_masterExpanded) _buildTimeline(context),
+          _buildHeader(isActive, thinkingCount, toolCount),
+          if (_masterExpanded) ...[
+            const SizedBox(height: 4),
+            _buildTimeline(context),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildHeader(bool isActive, int total) {
+  Widget _buildHeader(bool isActive, int thinkingCount, int toolCount) {
     return InkWell(
       onTap: () => setState(() => _masterExpanded = !_masterExpanded),
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(2),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedBuilder(
-              animation: _pulseAnimation,
-              builder: (context, _) {
-                final alpha = isActive ? _pulseAnimation.value : 0.5;
-                return Text(
-                  isActive ? 'working...' : 'thoughts + tools',
-                  style: TextStyle(
-                    color: AppColors.textSecondary(context).withValues(alpha: alpha),
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
-                  ),
-                );
-              },
+            // Status and counts - clean, minimal
+            Text(
+              isActive ? 'working' : 'work',
+              style: TextStyle(
+                color: AppColors.textSecondary(context).withValues(alpha: 0.5),
+                fontSize: 11,
+                fontFamily: 'monospace',
+              ),
             ),
-            if (total > 0) ...[
-              const SizedBox(width: 4),
+            if (thinkingCount > 0 || toolCount > 0) ...[
+              const SizedBox(width: 6),
               Text(
-                '$total',
+                '·',
                 style: TextStyle(
-                  color: AppColors.textSecondary(context).withValues(alpha: 0.35),
+                  color: AppColors.textSecondary(context).withValues(alpha: 0.25),
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '${thinkingCount + toolCount}',
+                style: TextStyle(
+                  color: AppColors.textSecondary(context).withValues(alpha: 0.4),
                   fontSize: 10,
+                  fontFamily: 'monospace',
                 ),
               ),
             ],
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Icon(
               _masterExpanded
                   ? Icons.keyboard_arrow_up_rounded
                   : Icons.keyboard_arrow_down_rounded,
               size: 14,
-              color: AppColors.textSecondary(context).withValues(alpha: 0.35),
+              color: AppColors.textSecondary(context).withValues(alpha: 0.3),
             ),
           ],
         ),
@@ -127,70 +92,22 @@ class _WorkThreadState extends State<WorkThread>
 
   Widget _buildTimeline(BuildContext context) {
     final entries = widget.entries;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (int i = 0; i < entries.length; i++)
-          _buildEntryRow(entries[i], i, entries.length, context),
-      ],
-    );
-  }
-
-  Widget _buildEntryRow(ThreadEntry entry, int index, int count, BuildContext context) {
-    final isLast = index == count - 1;
-
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 4,
-        top: index == 0 ? 0 : 1,
-        bottom: isLast ? 0 : 1,
-      ),
-      child: Row(
+    return Container(
+      padding: const EdgeInsets.only(left: 0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 5, right: 8),
-            child: _buildNode(entry, context),
-          ),
-          Expanded(
-            child: _EntryFadeIn(
-              key: ValueKey('entry_$index'),
-              child: _buildEntryContent(entry),
+          for (int i = 0; i < entries.length; i++)
+            Padding(
+              padding: EdgeInsets.only(
+                top: i == 0 ? 0 : 2,
+              ),
+              child: _buildEntryContent(entries[i]),
             ),
-          ),
         ],
       ),
     );
-  }
-
-  Widget _buildNode(ThreadEntry entry, BuildContext context) {
-    switch (entry) {
-      case ThinkingEntry(:final isStreaming):
-        return Text(
-          '●',
-          style: TextStyle(
-            fontSize: 7,
-            color: isStreaming
-                ? AppColors.textSecondary(context).withValues(alpha: 0.5)
-                : AppColors.textSecondary(context).withValues(alpha: 0.25),
-          ),
-        );
-
-      case ToolCallEntry(:final isExecuting):
-        return Text(
-          '▶',
-          style: TextStyle(
-            fontSize: 7,
-            color: isExecuting
-                ? AppColors.textSecondary(context).withValues(alpha: 0.5)
-                : AppColors.textSecondary(context).withValues(alpha: 0.25),
-          ),
-        );
-
-      default:
-        return const SizedBox.shrink();
-    }
   }
 
   Widget _buildEntryContent(ThreadEntry entry) {

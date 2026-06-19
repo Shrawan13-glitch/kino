@@ -25,7 +25,7 @@ class _ThinkingBlockState extends State<ThinkingBlock> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceLight(context).withValues(alpha: 0.12),
+        color: AppColors.surfaceLight(context).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Column(
@@ -35,16 +35,16 @@ class _ThinkingBlockState extends State<ThinkingBlock> {
             onTap: () => setState(() => _expanded = !_expanded),
             borderRadius: BorderRadius.circular(4),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'thought',
+                    'thinking',
                     style: TextStyle(
                       color: AppColors.textSecondary(context).withValues(alpha: 0.5),
-                      fontSize: 10,
-                      fontStyle: FontStyle.italic,
+                      fontSize: 11,
+                      fontFamily: 'monospace',
                     ),
                   ),
                   if (widget.isStreaming && widget.content.isEmpty)
@@ -52,8 +52,8 @@ class _ThinkingBlockState extends State<ThinkingBlock> {
                       '...',
                       style: TextStyle(
                         color: AppColors.textSecondary(context).withValues(alpha: 0.35),
-                        fontSize: 10,
-                        fontStyle: FontStyle.italic,
+                        fontSize: 11,
+                        fontFamily: 'monospace',
                       ),
                     ),
                   const SizedBox(width: 4),
@@ -61,7 +61,7 @@ class _ThinkingBlockState extends State<ThinkingBlock> {
                     _expanded
                         ? Icons.keyboard_arrow_up_rounded
                         : Icons.keyboard_arrow_down_rounded,
-                    size: 12,
+                    size: 14,
                     color: AppColors.textSecondary(context).withValues(alpha: 0.3),
                   ),
                 ],
@@ -79,7 +79,6 @@ class _ThinkingBlockState extends State<ThinkingBlock> {
                         color: AppColors.textSecondary(context).withValues(alpha: 0.7),
                         fontSize: 12,
                         height: 1.5,
-                        fontStyle: FontStyle.italic,
                       ),
                     )
                   : GptMarkdown(
