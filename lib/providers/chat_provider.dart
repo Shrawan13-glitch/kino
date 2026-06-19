@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+import 'package:printing/printing.dart';
 import '../database/database_helper.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
@@ -11,6 +12,7 @@ import '../services/generation_manager.dart';
 import '../services/openrouter_service.dart';
 import '../services/search/search_service.dart';
 import '../services/search/webfetch_service.dart';
+import '../services/vfs/vfs_service.dart';
 import '../utils/content_parser.dart';
 import 'settings_provider.dart';
 import '../services/debug_service.dart';
@@ -625,6 +627,28 @@ class ChatProvider extends ChangeNotifier {
           'required': ['path'],
         },
       ),
+      OpenRouterService.makeToolDefinition(
+        name: 'generate_pdf',
+        description:
+            'Generate a PDF document from HTML pages. First write each page as a separate HTML file using write_file, then call this tool with their paths. Each HTML file becomes a page in the PDF. Supports full HTML with inline CSS for styling — use <style> tags or inline styles for complete control over layout, fonts, colors, tables, etc.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'pages': {
+              'type': 'array',
+              'items': {'type': 'string'},
+              'description':
+                  'List of VFS paths to HTML files, in page order (e.g. ["cover.html", "report.html", "appendix.html"])',
+            },
+            'output': {
+              'type': 'string',
+              'description':
+                  'Output PDF file path in VFS (e.g. "report.pdf" or "documents/report.pdf")',
+            },
+          },
+          'required': ['pages', 'output'],
+        },
+      ),
       ...ToolRegistry().getAgentToolDefinitions(),
     ];
   }
@@ -729,6 +753,42 @@ class ChatProvider extends ChangeNotifier {
         }
         return await _toolExec.createDirectory(path);
 
+      case 'generate_pdf':
+        final pages = (arguments['pages'] as List<dynamic>?)?.cast<String>() ?? [];
+        final output = arguments['output'] as String?;
+        if (pages.isEmpty) return 'Error: pages list is required for generate_pdf';
+        if (output == null || output.isEmpty) {
+          return 'Error: output path is required for generate_pdf';
+        }
+
+        // Read each HTML page from VFS
+        final htmlContents = <String>[];
+        for (final pagePath in pages) {
+          final content = await _toolExec.readFile(pagePath);
+          if (content.startsWith('File not found') || content.startsWith('Error reading')) {
+            return 'Error: $content';
+          }
+          htmlContents.add(content);
+        }
+
+        // Combine with page breaks between pages
+        final combinedHtml = htmlContents.asMap().entries.map((entry) {
+          if (entry.key == htmlContents.length - 1) return entry.value;
+          return '<div style="page-break-after: always;">\n${entry.value}\n</div>';
+        }).join('\n');
+
+        try {
+          // ignore: deprecated_member_use
+          final pdfBytes = await Printing.convertHtml(html: combinedHtml);
+
+          final vfs = VfsService();
+          await vfs.writeFile(output, pdfBytes);
+
+          return 'PDF generated successfully: $output (${pdfBytes.length} bytes)';
+        } catch (e) {
+          return 'Error generating PDF: $e';
+        }
+
       default:
         final registry = ToolRegistry();
         final tool = registry.get(name);
@@ -744,7 +804,7 @@ class ChatProvider extends ChangeNotifier {
           );
           return result.success ? result.stdout : result.full;
         }
-        return 'Unknown tool: $name. Available tools: web_search, fetch_url, run_tool, write_file, read_file, list_dir, delete_file, create_dir.';
+        return 'Unknown tool: $name. Available tools: web_search, fetch_url, run_tool, write_file, read_file, list_dir, delete_file, create_dir, generate_pdf.';
     }
   }
 
