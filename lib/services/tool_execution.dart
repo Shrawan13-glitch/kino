@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io' show File, Directory, FileSystemEntity, FileSystemEntityType, Process, Platform;
 import 'package:path/path.dart' as p;
 import 'vfs/vfs_service.dart';
-import 'builtin_tools/builtin_tools.dart' show builtinHandlers;
 
 class ToolResult {
   final int exitCode;
@@ -73,16 +72,6 @@ class ToolExecutionService {
     Duration timeout = const Duration(seconds: 30),
     Map<String, String>? extraEnv,
   }) async {
-    // Check for a Dart-native builtin handler first.
-    final handler = builtinHandlers[tool];
-    if (handler != null) {
-      return handler(args,
-          stdin: stdin,
-          workingDirectory: workingDirectory,
-          environment: extraEnv ?? {},
-          timeout: timeout);
-    }
-
     final toolPath = _resolvePath(tool);
     final toolFile = File(toolPath);
     final isAndroid = Platform.isAndroid;
