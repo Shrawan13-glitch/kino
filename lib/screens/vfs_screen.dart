@@ -6,7 +6,7 @@ import '../services/vfs/vfs_node.dart';
 
 class VfsScreen extends StatefulWidget {
   final String initialPath;
-  const VfsScreen({super.key, this.initialPath = '/home'});
+  const VfsScreen({super.key, this.initialPath = '/'});
 
   @override
   State<VfsScreen> createState() => _VfsScreenState();
@@ -230,51 +230,31 @@ class _VfsScreenState extends State<VfsScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            vfs.currentPath.startsWith('/tools')
-                ? Icons.build_outlined
-                : Icons.folder_open_rounded,
+            Icons.folder_open_rounded,
             size: 56,
             color: AppColors.textSecondary(context).withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
-            vfs.currentPath.startsWith('/tools')
-                ? 'No tools installed'
-                : 'This folder is empty',
+            vfs.currentPath == '/' ? 'VFS is empty' : 'This folder is empty',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppColors.textSecondary(context).withValues(alpha: 0.6),
                 ),
           ),
-          if (!vfs.currentPath.startsWith('/tools')) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Tap + to create files and folders',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary(context).withValues(alpha: 0.4),
-              ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap + to create files and folders',
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary(context).withValues(alpha: 0.4),
             ),
-          ],
-          if (vfs.currentPath.startsWith('/tools'))
-            Padding(
-              padding: const EdgeInsets.only(top: 24),
-              child: Text(
-                'Built-in tools (jq, rg, json, search, sqlite3) are always available.\n'
-                'Additional tools can be installed via the AI agent.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary(context).withValues(alpha: 0.5),
-                ),
-              ),
-            ),
+          ),
         ],
       ),
     );
   }
 
   Widget? _buildFab(BuildContext context, VfsProvider vfs) {
-    if (vfs.currentPath == '/tools') return null;
     return FloatingActionButton(
       onPressed: () => _showCreateOptions(context, vfs),
       backgroundColor: AppColors.primary,
@@ -287,7 +267,7 @@ class _VfsScreenState extends State<VfsScreen> {
       vfs.navigateTo(node.vfsPath);
     } else if (node.isTextFile) {
       _openTextFile(context, vfs, node);
-    } else if (node.name == 'python3' || node.name == 'ffmpeg') {
+    } else if (node.name == 'ffmpeg') {
       _showToolInfo(context, node);
     } else {
       vfs.share(node.name);
@@ -431,15 +411,6 @@ class _VfsScreenState extends State<VfsScreen> {
             _infoRow(context, 'Type', 'Executable'),
             _infoRow(context, 'Size', node.sizeFormatted),
             _infoRow(context, 'Path', node.vfsPath),
-            if (node.name == 'python3') ...[
-              const SizedBox(height: 12),
-              Text(
-                'The agent can run Python scripts from the VFS using this interpreter.',
-                style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary(context)),
-              ),
-            ],
             if (node.name == 'ffmpeg') ...[
               const SizedBox(height: 12),
               Text(

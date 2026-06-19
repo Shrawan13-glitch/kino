@@ -21,21 +21,7 @@ class VfsService {
     if (_initialized) return;
     final appDir = await getApplicationDocumentsDirectory();
     _rootPath = p.join(appDir.path, 'vfs');
-
-    final dirs = [
-      _rootPath!,
-      p.join(_rootPath!, 'home'),
-      p.join(_rootPath!, 'home', 'notes'),
-      p.join(_rootPath!, 'home', 'documents'),
-      p.join(_rootPath!, 'home', 'downloads'),
-      p.join(_rootPath!, 'home', 'scripts'),
-      p.join(_rootPath!, 'tools'),
-      p.join(_rootPath!, 'tmp'),
-    ];
-
-    for (final d in dirs) {
-      await Directory(d).create(recursive: true);
-    }
+    await Directory(_rootPath!).create(recursive: true);
     _initialized = true;
   }
 

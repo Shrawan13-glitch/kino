@@ -25,7 +25,7 @@ final Map<String, BuiltinHandler> builtinHandlers = {
 String _vfsPath(String vfsPath) {
   final root = VfsService().rootPath;
   if (vfsPath.startsWith('/')) return '$root$vfsPath';
-  return '$root/home/$vfsPath';
+  return '$root/$vfsPath';
 }
 
 // ─── JSON / jq tool ───────────────────────────────────────────────

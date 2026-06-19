@@ -17,7 +17,7 @@ class VfsProvider extends ChangeNotifier {
   final Map<String, String> _clipboard = {};
   bool _isCut = false;
 
-  String _currentPath = '/home';
+  String _currentPath = '/';
   List<VfsNode> _entries = [];
   bool _isLoading = false;
   String? _error;
@@ -54,7 +54,7 @@ class VfsProvider extends ChangeNotifier {
 
   Future<void> init() async {
     await _vfs.init();
-    await navigateTo('/home');
+    await navigateTo('/');
   }
 
   Future<void> navigateTo(String path) async {

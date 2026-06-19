@@ -518,14 +518,14 @@ class ChatProvider extends ChangeNotifier {
       OpenRouterService.makeToolDefinition(
         name: 'run_tool',
         description:
-            'Execute a command-line tool from the VFS /tools/ directory. Use this to run Python scripts, process media with ffmpeg, search with ripgrep, query JSON with jq, etc. Returns stdout, stderr, and exit code. Console output is truncated at ~50KB; write large output to a file instead (e.g. python3 script.py > /home/output.txt).',
+            'Execute a command-line tool in the VFS. Use this to run scripts, process media with ffmpeg, search with ripgrep, query JSON with jq, etc. Returns stdout, stderr, and exit code. Console output is truncated at ~50KB; write large output to a file instead.',
         parameters: {
           'type': 'object',
           'properties': {
             'tool': {
               'type': 'string',
               'description':
-                  'Name of the tool to run (e.g. "python3", "ffmpeg", "rg"). Tools are in /tools/. Use list_dir to see available tools.',
+                  'Name or path of the tool to run. Use absolute VFS path (e.g. "/ffmpeg") or just the name (looked up relative to VFS root).',
             },
             'args': {
               'type': 'array',
@@ -555,7 +555,7 @@ class ChatProvider extends ChangeNotifier {
             'path': {
               'type': 'string',
               'description':
-                  'File path in VFS (e.g. "/home/notes/note.txt" or "scripts/analyze.py" without any "home" prefix — it is added automatically). Always use paths WITHOUT /home/ prefix for relative paths.',
+                  'File path in VFS. Can be absolute (e.g. "/notes/todo.txt") or relative to VFS root (e.g. "notes/todo.txt"). All paths resolve to VFS root.',
             },
             'content': {
               'type': 'string',
@@ -568,14 +568,14 @@ class ChatProvider extends ChangeNotifier {
       OpenRouterService.makeToolDefinition(
         name: 'read_file',
         description:
-            'Read the contents of a file from the VFS. Returns the file content as text. Large files over ~50KB are truncated; use run_tool with head or a Python script to process them in chunks.',
+            'Read the contents of a file from the VFS. Returns the file content as text. Large files over ~50KB are truncated; use run_tool with head to read in chunks.',
         parameters: {
           'type': 'object',
           'properties': {
             'path': {
               'type': 'string',
               'description':
-                  'File path in VFS (e.g. "/home/notes/note.txt" or "scripts/analyze.py")',
+                  'File path in VFS (e.g. "/notes/todo.txt" or "notes/todo.txt")',
             },
           },
           'required': ['path'],
@@ -584,14 +584,14 @@ class ChatProvider extends ChangeNotifier {
       OpenRouterService.makeToolDefinition(
         name: 'list_dir',
         description:
-            'List contents of a directory in the VFS. Shows files and directories with sizes. Use this to explore the VFS, find tools, browse user files, etc.',
+            'List contents of a directory in the VFS. Shows files and directories with sizes. Use this to explore the VFS and find files.',
         parameters: {
           'type': 'object',
           'properties': {
             'path': {
               'type': 'string',
               'description':
-                  'Directory path in VFS (e.g. "/home", "/tools", "/home/notes"). Defaults to "/home".',
+                  'Directory path in VFS (e.g. "/" or "projects"). Defaults to root "/".',
             },
           },
           'required': [],
@@ -736,7 +736,7 @@ class ChatProvider extends ChangeNotifier {
         return await _toolExec.readFile(path);
 
       case 'list_dir':
-        final path = arguments['path'] as String? ?? '/home';
+        final path = arguments['path'] as String? ?? '/';
         final listing = await _toolExec.listDirectory(path);
         return 'Contents of $path:\n$listing';
 
@@ -772,9 +772,10 @@ class ChatProvider extends ChangeNotifier {
           );
 
           final vfs = VfsService();
+          final resolved = output.startsWith('/') ? output : '/$output';
           await vfs.writeFile(output, pdfBytes);
 
-          return 'PDF generated successfully: $output (${pdfBytes.length} bytes)';
+          return 'PDF generated successfully: $resolved (${pdfBytes.length} bytes)';
         } catch (e) {
           return 'Error generating PDF: $e';
         }

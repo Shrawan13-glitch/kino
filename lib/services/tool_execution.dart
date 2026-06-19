@@ -41,15 +41,14 @@ class ToolExecutionService {
     if (tool.startsWith('/')) {
       return '$_vfsRoot$tool';
     }
-    return '$_vfsRoot/tools/$tool';
+    return '$_vfsRoot/$tool';
   }
 
   String _resolveVfsPath(String vfsPath) {
     if (vfsPath.startsWith('/')) {
       return '$_vfsRoot$vfsPath';
     }
-    final clean = vfsPath.startsWith('home/') ? vfsPath.substring(5) : vfsPath;
-    return '$_vfsRoot/home/$clean';
+    return '$_vfsRoot/$vfsPath';
   }
 
   /// Returns the path to the Android dynamic linker for executing binaries
@@ -94,19 +93,19 @@ class ToolExecutionService {
         exitCode: -1,
         stdout: '',
         stderr: 'Tool not found: $tool (looked at $toolPath)\n'
-            'Available tools can be listed with list_dir(path: "/tools")',
+            'Use list_dir to see available files and tools.',
       );
     }
 
     final workDir = workingDirectory != null
         ? _resolveVfsPath(workingDirectory)
-        : '$_vfsRoot/home';
+        : _vfsRoot;
 
     final env = <String, String>{
-      'HOME': '$_vfsRoot/home',
+      'HOME': _vfsRoot,
       'PATH': isAndroid
-          ? '$_vfsRoot/tools:/system/bin:/system/xbin'
-          : '$_vfsRoot/tools:/usr/bin:/usr/local/bin:/bin',
+          ? '$_vfsRoot:/system/bin:/system/xbin'
+          : '$_vfsRoot:/usr/bin:/usr/local/bin:/bin',
       'VFS_ROOT': _vfsRoot,
       ...?extraEnv,
     };
@@ -201,13 +200,18 @@ class ToolExecutionService {
     }
   }
 
+  String _normalizePath(String vfsPath) {
+    return vfsPath.startsWith('/') ? vfsPath : '/$vfsPath';
+  }
+
   Future<String> writeFile(String vfsPath, String content) async {
     try {
       final abs = _resolveVfsPath(vfsPath);
       final file = File(abs);
       await file.parent.create(recursive: true);
       await file.writeAsString(content);
-      return 'Successfully wrote ${content.length} bytes to $vfsPath';
+      final resolved = _normalizePath(vfsPath);
+      return 'Successfully wrote ${content.length} bytes to $resolved';
     } catch (e) {
       return 'Error writing file: $e';
     }
@@ -217,7 +221,8 @@ class ToolExecutionService {
     try {
       final abs = _resolveVfsPath(vfsPath);
       final file = File(abs);
-      if (!await file.exists()) return 'File not found: $vfsPath';
+      final resolved = _normalizePath(vfsPath);
+      if (!await file.exists()) return 'File not found: $resolved';
       final content = await file.readAsString();
       if (content.length > _maxOutputSize) {
         return '${content.substring(0, _maxOutputSize)}\n... (truncated, ${content.length} total bytes)';
@@ -232,7 +237,8 @@ class ToolExecutionService {
     try {
       final abs = _resolveVfsPath(vfsPath);
       final dir = Directory(abs);
-      if (!await dir.exists()) return 'Directory not found: $vfsPath';
+      final resolved = _normalizePath(vfsPath);
+      if (!await dir.exists()) return 'Directory not found: $resolved';
 
       final entities = await dir.list().toList();
       if (entities.isEmpty) return '(empty)';
@@ -247,7 +253,7 @@ class ToolExecutionService {
         lines.add('${isDir ? '[DIR]' : '[FILE]'}  $name$size');
       }
 
-      return lines.join('\n');
+      return '$resolved:\n${lines.join('\n')}';
     } catch (e) {
       return 'Error listing directory: $e';
     }
@@ -256,16 +262,17 @@ class ToolExecutionService {
   Future<String> deleteFile(String vfsPath) async {
     try {
       final abs = _resolveVfsPath(vfsPath);
+      final resolved = _normalizePath(vfsPath);
       final entity = FileSystemEntity.typeSync(abs);
       if (entity == FileSystemEntityType.notFound) {
-        return 'Not found: $vfsPath';
+        return 'Not found: $resolved';
       }
       if (entity == FileSystemEntityType.directory) {
         await Directory(abs).delete(recursive: true);
       } else {
         await File(abs).delete();
       }
-      return 'Deleted: $vfsPath';
+      return 'Deleted: $resolved';
     } catch (e) {
       return 'Error deleting: $e';
     }
@@ -275,7 +282,8 @@ class ToolExecutionService {
     try {
       final abs = _resolveVfsPath(vfsPath);
       await Directory(abs).create(recursive: true);
-      return 'Created directory: $vfsPath';
+      final resolved = _normalizePath(vfsPath);
+      return 'Created directory: $resolved';
     } catch (e) {
       return 'Error creating directory: $e';
     }
