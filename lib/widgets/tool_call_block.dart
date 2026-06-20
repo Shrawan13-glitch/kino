@@ -63,12 +63,77 @@ class _ToolCallBlockState extends State<ToolCallBlock>
     super.dispose();
   }
 
+  void _openContentSheet(String title, String content) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          maxChildSize: 0.9,
+          minChildSize: 0.35,
+          expand: false,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 32,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      child: SelectableText(
+                        content,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                          height: 1.5,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   String _toolLabel(String name) {
     final words = name.split('_');
-    return words.map((w) => w.isNotEmpty 
-        ? '${w[0].toUpperCase()}${w.substring(1)}' 
-        : w
-    ).join(' ');
+    return words
+        .map((w) =>
+            w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
+        .join(' ');
   }
 
   IconData _toolIcon(String name) {
@@ -94,7 +159,8 @@ class _ToolCallBlockState extends State<ToolCallBlock>
     if (widget.isStreaming) {
       return ('Running', AppColors.accent, Icons.hourglass_empty_rounded);
     }
-    return ('Pending', AppColors.textSecondary(context), Icons.schedule_rounded);
+    return ('Pending', AppColors.textSecondary(context),
+        Icons.schedule_rounded);
   }
 
   @override
@@ -106,10 +172,11 @@ class _ToolCallBlockState extends State<ToolCallBlock>
       duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: AppColors.surfaceLight(context).withValues(alpha: _expanded ? 0.12 : 0.08),
+        color: AppColors.surfaceLight(context)
+            .withValues(alpha: _expanded ? 0.12 : 0.08),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: _expanded 
+          color: _expanded
               ? AppColors.border(context).withValues(alpha: 0.25)
               : Colors.transparent,
           width: 1,
@@ -122,7 +189,8 @@ class _ToolCallBlockState extends State<ToolCallBlock>
             onTap: () => setState(() => _expanded = !_expanded),
             borderRadius: BorderRadius.circular(8),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: Row(
                 children: [
                   Container(
@@ -143,7 +211,8 @@ class _ToolCallBlockState extends State<ToolCallBlock>
                     child: Text(
                       _toolLabel(widget.toolCall.name),
                       style: TextStyle(
-                        color: AppColors.textPrimary(context).withValues(alpha: 0.85),
+                        color: AppColors.textPrimary(context)
+                            .withValues(alpha: 0.85),
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         letterSpacing: -0.2,
@@ -154,10 +223,13 @@ class _ToolCallBlockState extends State<ToolCallBlock>
                     animation: _pulseAnimation,
                     builder: (context, child) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: statusColor.withValues(
-                            alpha: widget.isStreaming ? 0.15 * _pulseAnimation.value : 0.12,
+                            alpha: widget.isStreaming
+                                ? 0.15 * _pulseAnimation.value
+                                : 0.12,
                           ),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
@@ -172,7 +244,8 @@ class _ToolCallBlockState extends State<ToolCallBlock>
                               statusIcon,
                               size: 11,
                               color: statusColor.withValues(
-                                alpha: widget.isStreaming ? _pulseAnimation.value : 0.9,
+                                alpha:
+                                    widget.isStreaming ? _pulseAnimation.value : 0.9,
                               ),
                             ),
                             const SizedBox(width: 4),
@@ -180,7 +253,9 @@ class _ToolCallBlockState extends State<ToolCallBlock>
                               status,
                               style: TextStyle(
                                 color: statusColor.withValues(
-                                  alpha: widget.isStreaming ? _pulseAnimation.value : 0.9,
+                                  alpha: widget.isStreaming
+                                      ? _pulseAnimation.value
+                                      : 0.9,
                                 ),
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
@@ -199,39 +274,49 @@ class _ToolCallBlockState extends State<ToolCallBlock>
                     child: Icon(
                       Icons.keyboard_arrow_down_rounded,
                       size: 18,
-                      color: AppColors.textSecondary(context).withValues(alpha: 0.45),
+                      color: AppColors.textSecondary(context)
+                          .withValues(alpha: 0.45),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          if (_expanded) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSection(
-                    context,
-                    'Input',
-                    Icons.input_outlined,
-                    JsonEncoder.withIndent('  ').convert(widget.toolCall.arguments),
-                  ),
-                  if (widget.toolCall.result != null) ...[
-                    const SizedBox(height: 8),
+          ClipRect(
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              heightFactor: _expanded ? 1.0 : 0.0,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     _buildSection(
                       context,
-                      widget.toolCall.error ? 'Error' : 'Output',
-                      widget.toolCall.error ? Icons.error_outline : Icons.output_outlined,
-                      widget.toolCall.result!,
-                      isError: widget.toolCall.error,
+                      'Input',
+                      Icons.input_outlined,
+                      JsonEncoder.withIndent('  ')
+                          .convert(widget.toolCall.arguments),
                     ),
+                    if (widget.toolCall.result != null) ...[
+                      const SizedBox(height: 8),
+                      _buildSection(
+                        context,
+                        widget.toolCall.error ? 'Error' : 'Output',
+                        widget.toolCall.error
+                            ? Icons.error_outline
+                            : Icons.output_outlined,
+                        widget.toolCall.result!,
+                        isError: widget.toolCall.error,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -244,6 +329,9 @@ class _ToolCallBlockState extends State<ToolCallBlock>
     String content, {
     bool isError = false,
   }) {
+    final showExpand = content.split('\n').length > 4 ||
+        content.length > 300;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -271,32 +359,74 @@ class _ToolCallBlockState extends State<ToolCallBlock>
           ],
         ),
         const SizedBox(height: 6),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isError
-                ? AppColors.error.withValues(alpha: 0.06)
-                : AppColors.background(context).withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
+        GestureDetector(
+          onTap: showExpand
+              ? () => _openContentSheet(label, content)
+              : null,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
               color: isError
-                  ? AppColors.error.withValues(alpha: 0.15)
-                  : AppColors.border(context).withValues(alpha: 0.2),
-              width: 1,
+                  ? AppColors.error.withValues(alpha: 0.06)
+                  : AppColors.background(context).withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isError
+                    ? AppColors.error.withValues(alpha: 0.15)
+                    : AppColors.border(context).withValues(alpha: 0.2),
+                width: 1,
+              ),
             ),
-          ),
-          child: SelectableText(
-            content,
-            style: TextStyle(
-              color: isError
-                  ? AppColors.error.withValues(alpha: 0.9)
-                  : AppColors.textPrimary(context).withValues(alpha: 0.85),
-              fontSize: 11,
-              fontFamily: 'monospace',
-              height: 1.4,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  content,
+                  style: TextStyle(
+                    color: isError
+                        ? AppColors.error.withValues(alpha: 0.9)
+                        : AppColors.textPrimary(context)
+                            .withValues(alpha: 0.85),
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    height: 1.4,
+                  ),
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (showExpand)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Show full',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: isError
+                                  ? AppColors.error.withValues(alpha: 0.7)
+                                  : AppColors.primary.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.open_in_new_rounded,
+                            size: 12,
+                            color: isError
+                                ? AppColors.error.withValues(alpha: 0.7)
+                                : AppColors.primary.withValues(alpha: 0.7),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            maxLines: 30,
           ),
         ),
       ],

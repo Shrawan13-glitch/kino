@@ -135,7 +135,8 @@ class _ThinkingBlockState extends State<ThinkingBlock>
                         style: TextStyle(
                           color: widget.isStreaming
                               ? AppColors.accent.withValues(alpha: 0.85)
-                              : AppColors.textSecondary(context).withValues(alpha: 0.65),
+                              : AppColors.textSecondary(context)
+                                  .withValues(alpha: 0.65),
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           letterSpacing: -0.2,
@@ -152,48 +153,60 @@ class _ThinkingBlockState extends State<ThinkingBlock>
                         child: Icon(
                           Icons.keyboard_arrow_down_rounded,
                           size: 16,
-                          color: AppColors.textSecondary(context).withValues(alpha: 0.45),
+                          color: AppColors.textSecondary(context)
+                              .withValues(alpha: 0.45),
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              if (_expanded)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 2, 10, 8),
-                  child: widget.isStreaming
-                      ? Text(
-                          widget.content.isNotEmpty
-                              ? '${widget.content} ...'
-                              : 'Processing thoughts ...',
-                          style: TextStyle(
-                            color: AppColors.textSecondary(context).withValues(alpha: 0.75),
-                            fontSize: 12,
-                            height: 1.5,
-                          ),
-                        )
-                      : Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.background(context).withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: AppColors.border(context).withValues(alpha: 0.2),
-                              width: 1,
+              ClipRect(
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  alignment: Alignment.topCenter,
+                  heightFactor: _expanded ? 1.0 : 0.0,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 2, 10, 8),
+                    child: widget.isStreaming
+                        ? Text(
+                            widget.content.isNotEmpty
+                                ? '${widget.content} ...'
+                                : 'Processing thoughts ...',
+                            style: TextStyle(
+                              color: AppColors.textSecondary(context)
+                                  .withValues(alpha: 0.75),
+                              fontSize: 12,
+                              height: 1.5,
+                            ),
+                          )
+                        : Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.background(context)
+                                  .withValues(alpha: 0.4),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: AppColors.border(context)
+                                    .withValues(alpha: 0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: GptMarkdown(
+                              widget.content,
+                              tableBuilder: tableWidget,
+                              components: [
+                                ...MarkdownComponent.globalComponents
+                                    .where((c) => c is! BlockQuote),
+                                BeautifulBlockQuote(),
+                              ],
                             ),
                           ),
-                          child: GptMarkdown(
-                            widget.content,
-                            tableBuilder: tableWidget,
-                            components: [
-                              ...MarkdownComponent.globalComponents.where((c) => c is! BlockQuote),
-                              BeautifulBlockQuote(),
-                            ],
-                          ),
-                        ),
+                  ),
                 ),
+              ),
             ],
           ),
         );
@@ -215,7 +228,8 @@ class _ThinkingBlockState extends State<ThinkingBlock>
               child: Text(
                 '\u00B7',
                 style: TextStyle(
-                  color: AppColors.accent.withValues(alpha: active ? 0.8 : 0.3),
+                  color: AppColors.accent
+                      .withValues(alpha: active ? 0.8 : 0.3),
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
                 ),
