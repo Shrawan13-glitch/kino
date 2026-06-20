@@ -26,7 +26,7 @@ class SpeechGenerationCard extends StatefulWidget {
 }
 
 class _SpeechGenerationCardState extends State<SpeechGenerationCard>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _animController;
   late AnimationController _fadeController;
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -96,6 +96,9 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
+    _fadeController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _generatePatterns();
     _initDots();
     _startPatternCycle();
@@ -369,8 +372,16 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
       setState(() {
         _currentPattern = (_currentPattern + 1) % 22;
         _setPatternTargets(_currentPattern);
+        _resetTypewriter();
       });
     });
+  }
+
+  void _resetTypewriter() {
+    _statusCycleIndex = (_statusCycleIndex + 1) % _statusTexts.length;
+    _charIndex = 0;
+    _displayedText = '';
+    _erasing = false;
   }
 
   int _currentPattern = 0;
@@ -499,9 +510,10 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
                 width: width,
                 child: Stack(
                   children: [
-                    if (showDots)
-                      Opacity(
-                        opacity: dotsOpacity,
+                    Opacity(
+                      opacity: showDots ? dotsOpacity : 0,
+                      child: IgnorePointer(
+                        ignoring: !showDots,
                         child: AnimatedBuilder(
                           animation: _animController,
                           builder: (context, _) {
@@ -513,29 +525,31 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
                           },
                         ),
                       ),
-                    if (showPlayer)
-                      Opacity(
-                        opacity: playerOpacity,
+                    ),
+                    Opacity(
+                      opacity: showPlayer ? playerOpacity : 0,
+                      child: IgnorePointer(
+                        ignoring: !showPlayer,
                         child: _buildPlayer(context),
                       ),
+                    ),
                   ],
                 ),
               ),
-              if (showText)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Opacity(
+                  opacity: showText ? textOpacity : 0,
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Opacity(
-                        opacity: textOpacity,
-                        child: Text(
-                          '$_displayedText...',
-                          style: TextStyle(
-                            color: AppColors.primary.withValues(alpha: 0.85),
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.3,
-                          ),
+                      Text(
+                        '$_displayedText...',
+                        style: TextStyle(
+                          color: AppColors.primary.withValues(alpha: 0.85),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.3,
                         ),
                       ),
                       if (_phase == _CardPhase.loading) ...[
@@ -553,6 +567,7 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
                     ],
                   ),
                 ),
+              ),
             ],
           ),
         );
