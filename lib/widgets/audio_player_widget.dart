@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../constants.dart';
@@ -16,7 +16,8 @@ class AudioPlayerWidget extends StatefulWidget {
 
 class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   final AudioPlayer _player = AudioPlayer();
-  PlayerState _state = PlayerState.stopped;
+  ProcessingState _processingState = ProcessingState.idle;
+  bool _isPlaying = false;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
 
@@ -28,14 +29,19 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   void _setupListeners() {
-    _player.onPlayerStateChanged.listen((state) {
-      if (mounted) setState(() => _state = state);
+    _player.playerStateStream.listen((state) {
+      if (mounted) {
+        setState(() {
+          _processingState = state.processingState;
+          _isPlaying = state.playing;
+        });
+      }
     });
-    _player.onPositionChanged.listen((pos) {
+    _player.positionStream.listen((pos) {
       if (mounted) setState(() => _position = pos);
     });
-    _player.onDurationChanged.listen((dur) {
-      if (mounted) setState(() => _duration = dur);
+    _player.durationStream.listen((dur) {
+      if (mounted) setState(() => _duration = dur ?? Duration.zero);
     });
   }
 
@@ -47,7 +53,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     final absPath = p.join(appDir.path, 'vfs', clean);
     final file = File(absPath);
     if (await file.exists()) {
-      await _player.setSourceDeviceFile(absPath);
+      await _player.setAudioSource(AudioSource.uri(Uri.file(absPath)));
     }
   }
 
@@ -65,7 +71,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final isPlaying = _state == PlayerState.playing;
     final progress = _duration.inMilliseconds > 0
         ? _position.inMilliseconds / _duration.inMilliseconds
         : 0.0;
@@ -123,17 +128,17 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
           const SizedBox(width: 8),
           IconButton(
             onPressed: () {
-              if (isPlaying) {
+              if (_isPlaying) {
                 _player.pause();
-              } else if (_state == PlayerState.completed) {
+              } else if (_processingState == ProcessingState.completed) {
                 _player.seek(Duration.zero);
-                _player.resume();
+                _player.play();
               } else {
-                _player.resume();
+                _player.play();
               }
             },
             icon: Icon(
-              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
               color: AppColors.primary,
             ),
             splashRadius: 18,

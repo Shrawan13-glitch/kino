@@ -14,6 +14,7 @@ import '../widgets/work_thread.dart';
 import '../widgets/message_actions.dart';
 import '../widgets/context_indicator.dart';
 import '../widgets/bouncing_dots.dart';
+import '../widgets/speech_generation_card.dart';
 import '../models/thread_entry.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -362,6 +363,20 @@ class _ChatScreenState extends State<ChatScreen> {
         case ThinkingEntry():
           workBuffer.add(entry);
 
+        case ToolCallEntry(
+              :final toolName,
+              :final completed,
+              :final error,
+              :final result,
+            ) when toolName == 'generate_speech':
+          flushWork();
+          final vfsPath = _extractVfsPath(result ?? '');
+          segments.add(SpeechGenerationCard(
+            isCompleted: completed && !error,
+            result: result,
+            vfsPath: vfsPath,
+          ));
+
         case ToolCallEntry():
           workBuffer.add(entry);
 
@@ -385,6 +400,17 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     return segments;
+  }
+
+  String _extractVfsPath(String result) {
+    final lines = result.split('\n');
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.startsWith('File:') && trimmed.contains('.wav')) {
+        return trimmed.substring(5).trim();
+      }
+    }
+    return '';
   }
 
   Widget _buildEmptyState(BuildContext context) {
