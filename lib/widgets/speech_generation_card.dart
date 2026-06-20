@@ -463,98 +463,97 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
         final width = constraints.maxWidth;
         final height = 260.0;
         final fadeValue = _fadeController.value;
+        final revealing = _phase == _CardPhase.revealing;
+        final showDots = _phase != _CardPhase.playing;
+        final showPlayer = revealing || _phase == _CardPhase.playing;
+        final dotsOpacity = revealing ? 1.0 - fadeValue : 1.0;
+        final playerOpacity = revealing ? fadeValue : 1.0;
+        final showText = _phase == _CardPhase.loading || _phase == _CardPhase.morphing;
+        final textOpacity = _phase == _CardPhase.morphing
+            ? 1.0 - fadeValue.clamp(0, 1)
+            : 1.0;
 
-        return AnimatedSize(
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOutCubic,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.08),
-                  AppColors.primary.withValues(alpha: 0.03),
-                  AppColors.accent.withValues(alpha: 0.05),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.12),
-                width: 1,
-              ),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.primary.withValues(alpha: 0.08),
+                AppColors.primary.withValues(alpha: 0.03),
+                AppColors.accent.withValues(alpha: 0.05),
+              ],
             ),
-            child: _phase == _CardPhase.playing
-                ? _buildPlayer(context)
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        height: height,
-                        width: width,
-                        child: Stack(
-                          children: [
-                            // Dots canvas
-                            AnimatedOpacity(
-                              opacity: _phase == _CardPhase.revealing ? 1.0 - fadeValue : 1.0,
-                              duration: Duration.zero,
-                              child: AnimatedBuilder(
-                                animation: _animController,
-                                builder: (context, _) {
-                                  _updateDots();
-                                  return CustomPaint(
-                                    painter: _DotPainter(_dots),
-                                    size: Size(width, height),
-                                  );
-                                },
-                              ),
-                            ),
-                            // Real player (fading in)
-                            if (_phase == _CardPhase.revealing)
-                              AnimatedOpacity(
-                                opacity: fadeValue,
-                                duration: Duration.zero,
-                                child: _buildPlayer(context),
-                              ),
-                          ],
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: height,
+                width: width,
+                child: Stack(
+                  children: [
+                    if (showDots)
+                      Opacity(
+                        opacity: dotsOpacity,
+                        child: AnimatedBuilder(
+                          animation: _animController,
+                          builder: (context, _) {
+                            _updateDots();
+                            return CustomPaint(
+                              painter: _DotPainter(_dots),
+                              size: Size(width, height),
+                            );
+                          },
                         ),
                       ),
-                      if (_phase == _CardPhase.loading || _phase == _CardPhase.morphing)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                          child: Column(
-                            children: [
-                              AnimatedOpacity(
-                                opacity: _phase == _CardPhase.morphing ? 1.0 - fadeValue.clamp(0, 1) : 1.0,
-                                duration: Duration.zero,
-                                child: Text(
-                                  '$_displayedText...',
-                                  style: TextStyle(
-                                    color: AppColors.primary.withValues(alpha: 0.85),
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: -0.3,
-                                  ),
-                                ),
-                              ),
-                              if (_phase == _CardPhase.loading) ...[
-                                const SizedBox(height: 6),
-                                Text(
-                                  'generating audio, please wait',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary(context).withValues(alpha: 0.45),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 12),
-                            ],
+                    if (showPlayer)
+                      Opacity(
+                        opacity: playerOpacity,
+                        child: _buildPlayer(context),
+                      ),
+                  ],
+                ),
+              ),
+              if (showText)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                  child: Column(
+                    children: [
+                      Opacity(
+                        opacity: textOpacity,
+                        child: Text(
+                          '$_displayedText...',
+                          style: TextStyle(
+                            color: AppColors.primary.withValues(alpha: 0.85),
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.3,
                           ),
                         ),
+                      ),
+                      if (_phase == _CardPhase.loading) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'generating audio, please wait',
+                          style: TextStyle(
+                            color: AppColors.textSecondary(context).withValues(alpha: 0.45),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
                     ],
                   ),
+                ),
+            ],
           ),
         );
       },
