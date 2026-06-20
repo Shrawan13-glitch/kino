@@ -24,3 +24,22 @@ plugins {
 }
 
 include(":app")
+
+// Patch flutter_inappwebview_android for AGP 9.x compatibility.
+// The plugin uses getDefaultProguardFile("proguard-android.txt") which was removed in AGP 9.
+val pubCacheDir = System.getenv("PUB_CACHE")?.let { file(it) }
+    ?: file("${System.getProperty("user.home")}/.pub-cache")
+if (pubCacheDir.exists()) {
+    fileTree(pubCacheDir) {
+        include("**/flutter_inappwebview_android*/android/build.gradle")
+    }.forEach { f ->
+        val text = f.readText()
+        if (text.contains("getDefaultProguardFile('proguard-android.txt')")) {
+            f.writeText(text.replace(
+                "getDefaultProguardFile('proguard-android.txt')",
+                "getDefaultProguardFile('proguard-android-optimize.txt')"
+            ))
+            logger.lifecycle("Patched ${f.name} for AGP 9.x")
+        }
+    }
+}
