@@ -69,10 +69,18 @@ class _WorkThreadState extends State<WorkThread> {
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildHeader(isActive, totalSteps, expanded),
-        if (expanded) ...[
-          const SizedBox(height: 8),
-          _buildTimeline(context),
-        ],
+        AnimatedCrossFade(
+          firstChild: const SizedBox(width: double.infinity),
+          secondChild: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: _buildTimeline(context),
+          ),
+          crossFadeState: expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 250),
+          sizeCurve: Curves.easeInOut,
+        ),
       ],
     );
   }
