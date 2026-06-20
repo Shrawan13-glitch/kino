@@ -315,7 +315,9 @@ class _ToolCallBlockState extends State<ToolCallBlock>
                     ],
                     if (widget.toolCall.name == 'generate_speech' &&
                         widget.toolCall.completed &&
-                        !widget.toolCall.error) ...[
+                        !widget.toolCall.error &&
+                        widget.toolCall.result != null &&
+                        widget.toolCall.result!.startsWith('✅')) ...[
                       const SizedBox(height: 8),
                       AudioPlayerWidget(
                         vfsPath: _extractVfsPath(widget.toolCall.result!),
@@ -335,8 +337,8 @@ class _ToolCallBlockState extends State<ToolCallBlock>
     final lines = result.split('\n');
     for (final line in lines) {
       final trimmed = line.trim();
-      if (trimmed.startsWith('/') && trimmed.endsWith('.wav')) {
-        return trimmed;
+      if (trimmed.startsWith('File:') && trimmed.contains('.wav')) {
+        return trimmed.substring(5).trim();
       }
     }
     return '/speech.wav';

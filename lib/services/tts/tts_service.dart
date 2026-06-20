@@ -29,12 +29,23 @@ class TtsService {
       await _repoService.ensureRepoExists();
 
       final itemsJson = jsonEncode(items.map((i) => i.toJson()).toList());
-      DebugService.instance.info('TTS: triggering workflow');
+
+      // Record the current latest run BEFORE we dispatch
+      final beforeRunId = await api.getLatestDispatchRunId();
+      DebugService.instance.info(
+        'TTS: latest run before dispatch=$beforeRunId, triggering...',
+      );
 
       await api.triggerWorkflow(itemsJson);
 
-      DebugService.instance.info('TTS: waiting for workflow to complete...');
-      final runId = await _pollForRun(api);
+      // Wait for the new run to appear (the one we just triggered)
+      DebugService.instance.info('TTS: waiting for new run to appear...');
+      final runId = await api.awaitNewRun(beforeRunId);
+      DebugService.instance.info('TTS: new run $runId detected');
+
+      // Now poll that specific run until it completes
+      DebugService.instance.info('TTS: waiting for run $runId to finish...');
+      await _pollForSpecificRun(api, runId);
       DebugService.instance.info('TTS: run $runId completed');
 
       DebugService.instance.info('TTS: downloading artifact...');
@@ -59,46 +70,41 @@ class TtsService {
           'Voices used: ${items.map((i) => i.voice).toSet().join(', ')}';
     } catch (e, s) {
       DebugService.instance.error('TTS: failed', e, s);
-      return 'Error generating speech: $e';
+      return 'Error: $e';
     }
   }
 
-  Future<int> _pollForRun(
-    GithubApiService api, {
+  Future<void> _pollForSpecificRun(
+    GithubApiService api,
+    int runId, {
     Duration pollInterval = const Duration(seconds: 10),
     Duration timeout = const Duration(seconds: 180),
   }) async {
     final deadline = DateTime.now().add(timeout);
 
     while (DateTime.now().isBefore(deadline)) {
-      try {
-        final runId = await api.findLatestTriggeredRun();
-        final run = await api.getWorkflowRun(runId);
+      final run = await api.getWorkflowRun(runId);
 
-        if (run == null) {
-          await Future.delayed(pollInterval);
-          continue;
-        }
-
-        final status = run['status'] as String?;
-        final conclusion = run['conclusion'] as String?;
-
-        DebugService.instance.info(
-          'TTS: run $runId status=$status conclusion=$conclusion',
-        );
-
-        if (status == 'completed') {
-          if (conclusion == 'success') return runId;
-          throw Exception(
-            'Workflow $conclusion. Check: ${run['html_url']}',
-          );
-        }
-
+      if (run == null) {
         await Future.delayed(pollInterval);
-      } catch (e) {
-        if (e is Exception) rethrow;
-        await Future.delayed(pollInterval);
+        continue;
       }
+
+      final status = run['status'] as String?;
+      final conclusion = run['conclusion'] as String?;
+
+      DebugService.instance.info(
+        'TTS: run $runId status=$status conclusion=$conclusion',
+      );
+
+      if (status == 'completed') {
+        if (conclusion == 'success') return;
+        throw Exception(
+          'Workflow $conclusion. Check: ${run['html_url']}',
+        );
+      }
+
+      await Future.delayed(pollInterval);
     }
 
     throw Exception('TTS timed out after ${timeout.inSeconds}s');

@@ -62,7 +62,7 @@ class GithubApiService {
     }
   }
 
-  Future<int> triggerWorkflow(String itemsJson) async {
+  Future<void> triggerWorkflow(String itemsJson) async {
     final repo = await getRepoFullName();
     final resp = await _client.post(
       Uri.parse(
@@ -86,24 +86,39 @@ class GithubApiService {
         'Failed to trigger workflow: ${body?['message'] ?? resp.statusCode}',
       );
     }
-
-    return resp.statusCode;
   }
 
-  Future<Map<String, dynamic>?> getLatestWorkflowRun() async {
+  /// Get the ID of the latest workflow_dispatch run (any status).
+  /// Returns -1 if no runs exist yet.
+  Future<int> getLatestDispatchRunId() async {
     final repo = await getRepoFullName();
     final resp = await _client.get(
       Uri.parse(
-        'https://api.github.com/repos/$repo/actions/workflows/generate.yml/runs?per_page=1&status=completed',
+        'https://api.github.com/repos/$repo/actions/workflows/generate.yml/runs?per_page=1&event=workflow_dispatch',
       ),
       headers: _headers,
     );
 
-    if (resp.statusCode != 200) return null;
+    if (resp.statusCode != 200) return -1;
     final data = jsonDecode(resp.body) as Map<String, dynamic>;
     final runs = data['workflow_runs'] as List<dynamic>;
-    if (runs.isEmpty) return null;
-    return runs.first as Map<String, dynamic>;
+    if (runs.isEmpty) return -1;
+    return (runs.first as Map<String, dynamic>)['id'] as int;
+  }
+
+  /// Poll until a new workflow_dispatch run appears that differs from [previousRunId].
+  Future<int> awaitNewRun(int previousRunId,
+      {Duration pollInterval = const Duration(seconds: 3),
+      Duration timeout = const Duration(seconds: 30)}) async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      final latestId = await getLatestDispatchRunId();
+      if (latestId != -1 && latestId != previousRunId) {
+        return latestId;
+      }
+      await Future.delayed(pollInterval);
+    }
+    throw Exception('No new workflow run detected after ${timeout.inSeconds}s');
   }
 
   Future<Map<String, dynamic>?> getWorkflowRun(int runId) async {
@@ -114,25 +129,6 @@ class GithubApiService {
     );
     if (resp.statusCode != 200) return null;
     return jsonDecode(resp.body) as Map<String, dynamic>;
-  }
-
-  Future<int> findLatestTriggeredRun() async {
-    final repo = await getRepoFullName();
-    final resp = await _client.get(
-      Uri.parse(
-        'https://api.github.com/repos/$repo/actions/workflows/generate.yml/runs?per_page=1&event=workflow_dispatch',
-      ),
-      headers: _headers,
-    );
-
-    if (resp.statusCode != 200) {
-      throw Exception('Failed to list runs: ${resp.statusCode}');
-    }
-
-    final data = jsonDecode(resp.body) as Map<String, dynamic>;
-    final runs = data['workflow_runs'] as List<dynamic>;
-    if (runs.isEmpty) throw Exception('No workflow runs found');
-    return (runs.first as Map<String, dynamic>)['id'] as int;
   }
 
   Future<List<int>> downloadArtifact(int runId) async {
