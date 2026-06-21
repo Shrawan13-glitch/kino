@@ -33,10 +33,16 @@ class TaskPlanBanner extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
+                color: currentTask != null
+                    ? const Color(0xFFFFC107).withValues(alpha: 0.2)
+                    : AppColors.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.checklist_rounded, size: 16, color: AppColors.primary),
+              child: Icon(
+                Icons.checklist_rounded,
+                size: 16,
+                color: currentTask != null ? const Color(0xFFFFC107) : AppColors.primary,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -57,14 +63,30 @@ class TaskPlanBanner extends StatelessWidget {
                   if (currentTask != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        'Currently: $currentTask',
-                        style: TextStyle(
-                          color: AppColors.textSecondary(context).withValues(alpha: 0.7),
-                          fontSize: 11,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFFC107),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              currentTask,
+                              style: TextStyle(
+                                color: const Color(0xFFFFC107).withValues(alpha: 0.9),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
@@ -76,7 +98,7 @@ class TaskPlanBanner extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: total > 0 ? done / total : 0,
                 backgroundColor: AppColors.border(context).withValues(alpha: 0.3),
-                color: AppColors.primary,
+                color: const Color(0xFFFFC107),
                 minHeight: 4,
                 borderRadius: BorderRadius.circular(2),
               ),

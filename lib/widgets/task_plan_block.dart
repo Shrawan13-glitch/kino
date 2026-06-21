@@ -58,74 +58,177 @@ class TaskPlanBlock extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, indent: 12, endIndent: 12),
-          ...entry.tasks.map((task) => _buildTaskRow(context, task)),
+          ...entry.tasks.map((task) => _TaskRow(task: task)),
         ],
       ),
     );
   }
+}
 
-  Widget _buildTaskRow(BuildContext context, Task task) {
-    final icon = switch (task.status) {
-      TaskStatus.pending => Icons.circle_outlined,
-      TaskStatus.inProgress => Icons.radio_button_checked,
-      TaskStatus.completed => Icons.check_circle_rounded,
-      TaskStatus.failed => Icons.cancel_rounded,
-    };
-    final iconColor = switch (task.status) {
-      TaskStatus.pending => AppColors.textSecondary(context).withValues(alpha: 0.4),
-      TaskStatus.inProgress => AppColors.accent,
-      TaskStatus.completed => AppColors.success,
-      TaskStatus.failed => AppColors.error,
-    };
-    final textColor = switch (task.status) {
-      TaskStatus.completed => AppColors.textSecondary(context).withValues(alpha: 0.6),
-      TaskStatus.failed => AppColors.error,
-      _ => AppColors.textPrimary(context),
-    };
+class _TaskRow extends StatefulWidget {
+  final Task task;
+  const _TaskRow({required this.task});
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(icon, size: 18, color: iconColor),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.title,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 13,
-                    fontWeight: task.status == TaskStatus.completed
-                        ? FontWeight.w400
-                        : FontWeight.w500,
-                    decoration: task.status == TaskStatus.completed
-                        ? TextDecoration.lineThrough
-                        : null,
-                  ),
+  @override
+  State<_TaskRow> createState() => _TaskRowState();
+}
+
+class _TaskRowState extends State<_TaskRow> with SingleTickerProviderStateMixin {
+  AnimationController? _pulseController;
+  Animation<double>? _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.task.status == TaskStatus.inProgress) {
+      _startPulse();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_TaskRow old) {
+    super.didUpdateWidget(old);
+    if (widget.task.status == TaskStatus.inProgress && _pulseController == null) {
+      _startPulse();
+    } else if (widget.task.status != TaskStatus.inProgress && _pulseController != null) {
+      _pulseController?.dispose();
+      _pulseController = null;
+      _pulseAnimation = null;
+    }
+  }
+
+  void _startPulse() {
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _pulseAnimation = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _pulseController!, curve: Curves.easeInOut),
+    );
+    _pulseController!.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final task = widget.task;
+    final isActive = task.status == TaskStatus.inProgress;
+
+    if (!isActive || _pulseController == null) {
+      return _buildRow(context, task, 0.0);
+    }
+
+    return AnimatedBuilder(
+      animation: _pulseController!,
+      builder: (context, _) {
+        return _buildRow(context, task, _pulseAnimation?.value ?? 0.0);
+      },
+    );
+  }
+
+  Widget _buildRow(BuildContext context, Task task, double highlightAlpha) {
+    final isActive = task.status == TaskStatus.inProgress;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: isActive
+            ? const Color(0xFFFFC107).withValues(alpha: highlightAlpha * 0.2)
+            : null,
+        borderRadius: BorderRadius.circular(8),
+        border: isActive
+            ? Border(
+                left: BorderSide(
+                  color: const Color(0xFFFFC107).withValues(alpha: 0.7),
+                  width: 3,
                 ),
-                if (task.description.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: Text(
-                      task.description,
-                      style: TextStyle(
-                        color: AppColors.textSecondary(context)
-                            .withValues(alpha: 0.6),
-                        fontSize: 11,
-                      ),
+              )
+            : null,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(
+                switch (task.status) {
+                  TaskStatus.pending => Icons.circle_outlined,
+                  TaskStatus.inProgress => Icons.radio_button_checked,
+                  TaskStatus.completed => Icons.check_circle_rounded,
+                  TaskStatus.failed => Icons.cancel_rounded,
+                },
+                size: 18,
+                color: switch (task.status) {
+                  TaskStatus.pending => AppColors.textSecondary(context).withValues(alpha: 0.4),
+                  TaskStatus.inProgress => const Color(0xFFFFC107),
+                  TaskStatus.completed => AppColors.success,
+                  TaskStatus.failed => AppColors.error,
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: TextStyle(
+                      color: switch (task.status) {
+                        TaskStatus.inProgress => const Color(0xFFFFC107),
+                        TaskStatus.completed => AppColors.textSecondary(context).withValues(alpha: 0.6),
+                        TaskStatus.failed => AppColors.error,
+                        _ => AppColors.textPrimary(context),
+                      },
+                      fontSize: 13,
+                      fontWeight: isActive
+                          ? FontWeight.w600
+                          : task.status == TaskStatus.completed
+                              ? FontWeight.w400
+                              : FontWeight.w500,
+                      decoration: task.status == TaskStatus.completed
+                          ? TextDecoration.lineThrough
+                          : null,
                     ),
                   ),
-              ],
+                  if (task.description.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Text(
+                        task.description,
+                        style: TextStyle(
+                          color: isActive
+                              ? const Color(0xFFFFC107).withValues(alpha: 0.7)
+                              : AppColors.textSecondary(context)
+                                  .withValues(alpha: 0.6),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+            if (isActive)
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: const Color(0xFFFFC107),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
