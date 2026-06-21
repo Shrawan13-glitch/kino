@@ -11,6 +11,7 @@ import '../widgets/ai_response.dart';
 import '../widgets/typing_indicator.dart';
 import '../widgets/model_selector.dart';
 import '../widgets/work_thread.dart';
+import '../widgets/task_plan_block.dart';
 import '../widgets/message_actions.dart';
 import '../widgets/context_indicator.dart';
 import '../widgets/bouncing_dots.dart';
@@ -348,6 +349,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
         case ToolCallEntry():
           workBuffer.add(entry);
+
+        case TaskPlanEntry():
+          flushWork();
+          segments.add(TaskPlanBlock(entry: entry));
 
         case TextEntry(:final content, :final isStreaming):
           if (content.trim().isNotEmpty) {

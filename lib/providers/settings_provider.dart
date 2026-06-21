@@ -60,9 +60,23 @@ class SettingsProvider extends ChangeNotifier {
 - When the user asks to manage GitHub, use the appropriate tools. You do not need to ask for permission — just do it.
 - Use `http_request` for REST API interactions that aren't covered by dedicated tools.
 - For web research, try `web_search` first, then `fetch_url` to read interesting results. Fall back to `power_fetch_url` if the page requires JavaScript.
-- Break down complex requests into steps and work through them systematically.
 - Read the results of each tool before deciding the next step.
-- If a tool fails, try an alternative approach or explain what went wrong.''';
+- If a tool fails, try an alternative approach or explain what went wrong.
+
+## Task planning
+
+For complex or multi-step requests (research, building a project, anything that involves many steps), use the task planning system:
+
+1. Call `create_task_plan` with the full breakdown of tasks before starting any work.
+2. As you begin each task, call `update_task_status` to set it to `in_progress`.
+3. When you finish a task, call `update_task_status` to set it to `completed`.
+4. If something goes wrong with a task, set it to `failed` and explain why.
+
+The task plan is displayed to the user so they can see your progress in real-time. This is especially useful for:
+   - Research projects (break down into research → analyze → synthesize → present)
+   - GitHub workflows (create repo → set up branches → add files → open PR → deploy)
+   - Multi-step problem solving
+   - Any query that involves 3 or more distinct steps''';
 
   List<AiModel> get favoriteModels {
     if (_favoriteModelIds.isEmpty) return [];

@@ -1,3 +1,36 @@
+enum TaskStatus { pending, inProgress, completed, failed }
+
+class Task {
+  final String id;
+  final String title;
+  final String description;
+  TaskStatus status;
+
+  Task({
+    required this.id,
+    required this.title,
+    this.description = '',
+    this.status = TaskStatus.pending,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'description': description,
+        'status': status.name,
+      };
+
+  factory Task.fromJson(Map<String, dynamic> json) => Task(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        description: json['description'] as String? ?? '',
+        status: TaskStatus.values.firstWhere(
+          (s) => s.name == json['status'],
+          orElse: () => TaskStatus.pending,
+        ),
+      );
+}
+
 sealed class ThreadEntry {
   const ThreadEntry();
   Map<String, dynamic> toJson();
@@ -8,6 +41,7 @@ sealed class ThreadEntry {
       'thinking' => ThinkingEntry.fromJson(json),
       'text' => TextEntry.fromJson(json),
       'tool_call' => ToolCallEntry.fromJson(json),
+      'task_plan' => TaskPlanEntry.fromJson(json),
       _ => throw ArgumentError('Unknown entry type: ${json['type']}'),
     };
   }
@@ -99,5 +133,32 @@ class ToolCallEntry extends ThreadEntry {
         completed: json['completed'] as bool? ?? false,
         error: json['error'] as bool? ?? false,
         result: json['result'] as String?,
+      );
+}
+
+class TaskPlanEntry extends ThreadEntry {
+  List<Task> tasks;
+
+  TaskPlanEntry({required this.tasks});
+
+  @override
+  bool get isStreaming => false;
+
+  void updateTaskStatus(String taskId, TaskStatus status) {
+    final task = tasks.firstWhere((t) => t.id == taskId);
+    task.status = status;
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'task_plan',
+        'tasks': tasks.map((t) => t.toJson()).toList(),
+      };
+
+  factory TaskPlanEntry.fromJson(Map<String, dynamic> json) =>
+      TaskPlanEntry(
+        tasks: (json['tasks'] as List<dynamic>)
+            .map((t) => Task.fromJson(t as Map<String, dynamic>))
+            .toList(),
       );
 }

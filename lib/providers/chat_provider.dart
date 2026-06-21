@@ -37,6 +37,7 @@ class ChatProvider extends ChangeNotifier {
   final HttpService _httpService = HttpService();
   GithubIntegrationService? _githubIntegration;
   TtsService? _ttsService;
+  Message? _activeAiMessage;
 
   ChatProvider(this._settingsProvider) {
     _searchService = SearchService();
@@ -283,6 +284,7 @@ class ChatProvider extends ChangeNotifier {
       content: '',
       createdAt: DateTime.now(),
     );
+    _activeAiMessage = aiMessage;
 
     final toolDefinitions = _buildToolDefinitions();
     final baseMessages = _buildApiMessages();
@@ -341,11 +343,13 @@ class ChatProvider extends ChangeNotifier {
           );
 
           _isGenerating = false;
+          _activeAiMessage = null;
           notifyListeners();
           DebugService.instance.info('_generateResponse: completed');
         },
         onError: (e) async {
           DebugService.instance.error('_generateResponse: stream error', e);
+          _activeAiMessage = null;
           _messages.remove(aiMessage);
           await _db.deleteMessage(aiMessage.id);
           await _insertErrorMessage(chatId, 'Error: $e');
@@ -355,6 +359,7 @@ class ChatProvider extends ChangeNotifier {
       );
     } catch (e, s) {
       DebugService.instance.error('_generateResponse: exception', e, s);
+      _activeAiMessage = null;
       _messages.remove(aiMessage);
       await _db.deleteMessage(aiMessage.id);
       await _insertErrorMessage(chatId, 'Connection error: $e');
@@ -763,6 +768,68 @@ class ChatProvider extends ChangeNotifier {
         },
       ),
 
+      OpenRouterService.makeToolDefinition(
+        name: 'create_task_plan',
+        description:
+            'Break down a complex query or project into a structured task list. '
+            'Use this when the user asks something multi-step — research, building a project, '
+            'or anything that benefits from a clear plan. Create the plan first, then work through '
+            'each task sequentially, updating their status as you go.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'tasks': {
+              'type': 'array',
+              'description':
+                  'Array of tasks to perform, in order. Each task must have a brief unique id, '
+                  'a short title, and a one-line description of what to do.',
+              'items': {
+                'type': 'object',
+                'properties': {
+                  'id': {
+                    'type': 'string',
+                    'description': 'Unique identifier for this task (e.g. "1", "research", "setup")',
+                  },
+                  'title': {
+                    'type': 'string',
+                    'description': 'Short task title (e.g. "Research topic", "Create repo")',
+                  },
+                  'description': {
+                    'type': 'string',
+                    'description': 'One-line description of what this task involves',
+                  },
+                },
+                'required': ['id', 'title'],
+              },
+            },
+          },
+          'required': ['tasks'],
+        },
+      ),
+      OpenRouterService.makeToolDefinition(
+        name: 'update_task_status',
+        description:
+            'Update the status of a task in the current task plan. '
+            'Call this when you complete a task, start working on one, or if one fails. '
+            'The user will see the task list update in real-time.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'task_id': {
+              'type': 'string',
+              'description': 'The task id from the plan you created',
+            },
+            'status': {
+              'type': 'string',
+              'description': 'New status: "completed" when done, "in_progress" when starting, '
+                  '"failed" if something went wrong',
+              'enum': ['pending', 'in_progress', 'completed', 'failed'],
+            },
+          },
+          'required': ['task_id', 'status'],
+        },
+      ),
+
       if (_githubIntegration != null) ...GithubToolService.toolDefinitions,
     ];
   }
@@ -956,6 +1023,47 @@ class ChatProvider extends ChangeNotifier {
           items: ttsItems,
           outputPath: outputPath,
         );
+
+      case 'create_task_plan':
+        final tasksRaw = arguments['tasks'] as List?;
+        if (tasksRaw == null || tasksRaw.isEmpty) {
+          return 'Error: tasks parameter is required for create_task_plan';
+        }
+        final tasks = tasksRaw.map((t) {
+          final map = t as Map<String, dynamic>;
+          return Task(
+            id: map['id'] as String,
+            title: map['title'] as String,
+            description: map['description'] as String? ?? '',
+          );
+        }).toList();
+
+        final planEntry = TaskPlanEntry(tasks: tasks);
+        _activeAiMessage?.entries.add(planEntry);
+        notifyListeners();
+        return 'Task plan created with ${tasks.length} tasks. Start working through them and update their status with update_task_status as you complete each one.';
+
+      case 'update_task_status':
+        final taskId = arguments['task_id'] as String?;
+        final statusStr = arguments['status'] as String?;
+        if (taskId == null || statusStr == null) {
+          return 'Error: task_id and status parameters are required for update_task_status';
+        }
+        final status = TaskStatus.values.firstWhere(
+          (s) => s.name == statusStr,
+          orElse: () => TaskStatus.pending,
+        );
+        final planEntry = _activeAiMessage?.entries
+            .whereType<TaskPlanEntry>()
+            .lastOrNull;
+        if (planEntry == null) {
+          return 'Error: no task plan found. Create one first with create_task_plan.';
+        }
+        planEntry.updateTaskStatus(taskId, status);
+        notifyListeners();
+        final taskName =
+            planEntry.tasks.firstWhere((t) => t.id == taskId).title;
+        return 'Task "$taskName" updated to $statusStr.';
 
       default:
         if (name.startsWith('github_')) {
