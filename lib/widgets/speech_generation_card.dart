@@ -369,10 +369,7 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
   }
 
   void _resetTypewriter() {
-    _statusCycleIndex = (_statusCycleIndex + 1) % _statusTexts.length;
-    _charIndex = 0;
-    _displayedText = '';
-    _erasing = false;
+    _erasing = true;
   }
 
   int _currentPattern = 0;
@@ -390,14 +387,7 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
       if (!mounted || (_phase != _CardPhase.loading && _phase != _CardPhase.morphing)) return;
       setState(() {
         final currentWord = _statusTexts[_statusCycleIndex];
-        if (!_erasing) {
-          if (_charIndex < currentWord.length) {
-            _charIndex++;
-            _displayedText = currentWord.substring(0, _charIndex);
-          } else {
-            _erasing = true;
-          }
-        } else {
+        if (_erasing) {
           if (_charIndex > 0) {
             _charIndex--;
             _displayedText = currentWord.substring(0, _charIndex);
@@ -405,6 +395,9 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
             _erasing = false;
             _statusCycleIndex = (_statusCycleIndex + 1) % _statusTexts.length;
           }
+        } else if (_charIndex < currentWord.length) {
+          _charIndex++;
+          _displayedText = currentWord.substring(0, _charIndex);
         }
       });
     });
@@ -616,14 +609,14 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
         : 0.0;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Spacer(flex: 2),
           // CD icon at top center
           Container(
-            width: 72,
-            height: 72,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
@@ -634,13 +627,13 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
               ),
               border: Border.all(
                 color: AppColors.primary.withValues(alpha: 0.3),
-                width: 2.5,
+                width: 2,
               ),
             ),
             child: Center(
               child: Container(
-                width: 20,
-                height: 20,
+                width: 16,
+                height: 16,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.primary.withValues(alpha: 0.5),
@@ -648,22 +641,23 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           // Filename below CD
           Text(
             widget.vfsPath.split('/').last,
             style: TextStyle(
               color: AppColors.textPrimary(context),
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
           ),
-          const Spacer(flex: 1),
+          const SizedBox(height: 12),
           // Seekable progress bar with time labels
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 _formatDuration(_audioPosition),
@@ -702,8 +696,8 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          // Pause button centered
+          const SizedBox(height: 12),
+          // Play/Pause button centered
           GestureDetector(
             onTap: () {
               if (_audioPlaying) {
@@ -716,8 +710,8 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
               }
             },
             child: Container(
-              width: 56,
-              height: 56,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.primary.withValues(alpha: 0.12),
@@ -727,11 +721,10 @@ class _SpeechGenerationCardState extends State<SpeechGenerationCard>
                     ? Icons.pause_rounded
                     : Icons.play_arrow_rounded,
                 color: AppColors.primary,
-                size: 32,
+                size: 28,
               ),
             ),
           ),
-          const Spacer(flex: 2),
         ],
       ),
     );
