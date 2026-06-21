@@ -13,3 +13,4 @@ export 'user_service.dart';
 
 export 'github_tool_service.dart';
 export 'github_integration_service.dart';
+export 'settings_service.dart';

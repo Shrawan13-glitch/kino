@@ -8,6 +8,7 @@ import 'pr_service.dart';
 import 'actions_service.dart';
 import 'issue_service.dart';
 import 'user_service.dart';
+import 'settings_service.dart';
 import '../debug_service.dart';
 
 class GithubIntegrationService {
@@ -21,6 +22,7 @@ class GithubIntegrationService {
   late final GithubActionsService actions;
   late final GithubIssueService issues;
   late final GithubUserService users;
+  late final GithubSettingsService settings;
 
   GithubIntegrationService(this._auth) {
     _client = GithubClient(_auth);
@@ -32,6 +34,7 @@ class GithubIntegrationService {
     actions = GithubActionsService(_client);
     issues = GithubIssueService(_client);
     users = GithubUserService(_client);
+    settings = GithubSettingsService(_client);
   }
 
   bool get isConnected => _auth.isAuthenticated;
@@ -432,6 +435,325 @@ class GithubIntegrationService {
         final data = await users.getAuthenticatedUser();
         return _formatUser(data);
 
+      // ── Repo Settings ──
+      case 'github_update_repo_settings':
+        final data = await repos.updateRepo(
+          args['owner'] as String,
+          args['repo'] as String,
+          homepage: args['homepage'] as String?,
+          hasIssues: args['has_issues'] as bool?,
+          hasProjects: args['has_projects'] as bool?,
+          hasWiki: args['has_wiki'] as bool?,
+          allowSquashMerge: args['allow_squash_merge'] as bool?,
+          allowMergeCommit: args['allow_merge_commit'] as bool?,
+          allowRebaseMerge: args['allow_rebase_merge'] as bool?,
+          allowAutoMerge: args['allow_auto_merge'] as bool?,
+          deleteBranchOnMerge: args['delete_branch_on_merge'] as bool?,
+          archived: args['archived'] as bool?,
+          visibility: args['visibility'] as String?,
+        );
+        return 'Repository settings updated.\n'
+            '${_formatRepoDetail(data)}';
+
+      case 'github_replace_topics':
+        await repos.replaceTopics(
+          args['owner'] as String,
+          args['repo'] as String,
+          (args['topics'] as List).cast<String>(),
+        );
+        return 'Topics replaced for ${args['owner']}/${args['repo']}.';
+
+      // ── Collaborators ──
+      case 'github_list_collaborators':
+        final data = await repos.listCollaborators(
+          args['owner'] as String,
+          args['repo'] as String,
+          permission: args['permission'] as String?,
+        );
+        if (data.isEmpty) return 'No collaborators found.';
+        return 'Collaborators for ${args['owner']}/${args['repo']}:\n'
+            '${data.map((c) => '- @${c['login']} (${c['role_name'] ?? c['permissions']})').join('\n')}';
+
+      case 'github_add_collaborator':
+        await repos.addCollaborator(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['username'] as String,
+          permission: args['permission'] as String? ?? 'push',
+        );
+        return '@${args['username']} added to ${args['owner']}/${args['repo']}.';
+
+      case 'github_remove_collaborator':
+        await repos.removeCollaborator(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['username'] as String,
+        );
+        return '@${args['username']} removed from ${args['owner']}/${args['repo']}.';
+
+      // ── Secrets ──
+      case 'github_list_secrets':
+        final data = await actions.listRepoSecrets(
+          args['owner'] as String,
+          args['repo'] as String,
+        );
+        if (data.isEmpty) return 'No secrets found.';
+        return 'Secrets for ${args['owner']}/${args['repo']}:\n'
+            '${data.map((s) => '- ${s['name']} (updated: ${s['updated_at']})').join('\n')}';
+
+      case 'github_create_secret':
+        await actions.createOrUpdateRepoSecret(
+          args['owner'] as String,
+          args['repo'] as String,
+          (args['name'] as String).toUpperCase(),
+          args['value'] as String,
+        );
+        return 'Secret "${(args['name'] as String).toUpperCase()}" saved to ${args['owner']}/${args['repo']}.';
+
+      case 'github_delete_secret':
+        await actions.deleteRepoSecret(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['name'] as String,
+        );
+        return 'Secret "${args['name']}" deleted from ${args['owner']}/${args['repo']}.';
+
+      // ── Variables ──
+      case 'github_list_variables':
+        final data = await actions.listRepoVariables(
+          args['owner'] as String,
+          args['repo'] as String,
+        );
+        if (data.isEmpty) return 'No variables found.';
+        return 'Variables for ${args['owner']}/${args['repo']}:\n'
+            '${data.map((v) => '- ${v['name']} = ${v['value']}').join('\n')}';
+
+      case 'github_create_variable':
+        final vdata = await actions.createRepoVariable(
+          args['owner'] as String,
+          args['repo'] as String,
+          (args['name'] as String).toUpperCase(),
+          args['value'] as String,
+        );
+        return 'Variable "${vdata['name']}" created on ${args['owner']}/${args['repo']}.';
+
+      case 'github_update_variable':
+        await actions.updateRepoVariable(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['name'] as String,
+          args['value'] as String,
+        );
+        return 'Variable "${args['name']}" updated on ${args['owner']}/${args['repo']}.';
+
+      case 'github_delete_variable':
+        await actions.deleteRepoVariable(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['name'] as String,
+        );
+        return 'Variable "${args['name']}" deleted from ${args['owner']}/${args['repo']}.';
+
+      // ── Environments ──
+      case 'github_list_environments':
+        final edata = await settings.listEnvironments(
+          args['owner'] as String,
+          args['repo'] as String,
+        );
+        if (edata.isEmpty) return 'No environments found.';
+        return 'Environments for ${args['owner']}/${args['repo']}:\n'
+            '${edata.map((e) => '- ${e['name']}').join('\n')}';
+
+      case 'github_create_environment':
+        final envResult = await settings.createOrUpdateEnvironment(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['env'] as String,
+          waitTimer: (args['wait_timer'] as num?)?.toInt(),
+        );
+        return 'Environment "${args['env']}" created/updated.\n'
+            'URL: ${envResult['html_url']}';
+
+      case 'github_delete_environment':
+        await settings.deleteEnvironment(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['env'] as String,
+        );
+        return 'Environment "${args['env']}" deleted.';
+
+      case 'github_list_env_secrets':
+        final esData = await settings.listEnvSecrets(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['env'] as String,
+        );
+        if (esData.isEmpty) {
+          return 'No secrets in environment "${args['env']}".';
+        }
+        return 'Secrets for environment "${args['env']}":\n'
+            '${esData.map((s) => '- ${s['name']}').join('\n')}';
+
+      case 'github_create_env_secret':
+        await settings.createOrUpdateEnvSecret(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['env'] as String,
+          (args['name'] as String).toUpperCase(),
+          args['value'] as String,
+        );
+        return 'Secret "${(args['name'] as String).toUpperCase()}" saved to '
+            'environment "${args['env']}".';
+
+      case 'github_delete_env_secret':
+        await settings.deleteEnvSecret(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['env'] as String,
+          args['name'] as String,
+        );
+        return 'Secret "${args['name']}" deleted from environment "${args['env']}".';
+
+      case 'github_list_env_variables':
+        final evData = await settings.listEnvVariables(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['env'] as String,
+        );
+        if (evData.isEmpty) {
+          return 'No variables in environment "${args['env']}".';
+        }
+        return 'Variables for environment "${args['env']}":\n'
+            '${evData.map((v) => '- ${v['name']} = ${v['value']}').join('\n')}';
+
+      case 'github_create_env_variable':
+        final evResult = await settings.createEnvVariable(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['env'] as String,
+          (args['name'] as String).toUpperCase(),
+          args['value'] as String,
+        );
+        return 'Variable "${evResult['name']}" created in environment "${args['env']}".';
+
+      case 'github_update_env_variable':
+        await settings.updateEnvVariable(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['env'] as String,
+          args['name'] as String,
+          args['value'] as String,
+        );
+        return 'Variable "${args['name']}" updated in environment "${args['env']}".';
+
+      case 'github_delete_env_variable':
+        await settings.deleteEnvVariable(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['env'] as String,
+          args['name'] as String,
+        );
+        return 'Variable "${args['name']}" deleted from environment "${args['env']}".';
+
+      // ── Branch Protection ──
+      case 'github_get_branch_protection':
+        final bpResult = await settings.getBranchProtection(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['branch'] as String,
+        );
+        return _formatBranchProtection(bpResult);
+
+      case 'github_update_branch_protection':
+        final bpData = await settings.updateBranchProtection(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['branch'] as String,
+          requiredStatusChecks:
+              args['required_status_checks'] as bool? ?? false,
+          requiredPullRequestReviews:
+              args['required_pull_request_reviews'] as bool? ?? false,
+          requiredApprovingReviewCount:
+              (args['required_approving_review_count'] as num?)?.toInt(),
+          dismissStaleReviews: args['dismiss_stale_reviews'] as bool?,
+          requireCodeOwnerReviews:
+              args['require_code_owner_reviews'] as bool?,
+          enforceAdmins: args['enforce_admins'] as bool? ?? false,
+          requiredLinearHistory:
+              args['required_linear_history'] as bool?,
+          allowForcePushes: args['allow_force_pushes'] as bool?,
+          allowDeletions: args['allow_deletions'] as bool?,
+          requiredConversationResolution:
+              args['required_conversation_resolution'] as bool?,
+        );
+        return 'Branch protection updated for ${args['branch']}: '
+            '${_summarizeProtection(bpData)}';
+
+      case 'github_delete_branch_protection':
+        await settings.deleteBranchProtection(
+          args['owner'] as String,
+          args['repo'] as String,
+          args['branch'] as String,
+        );
+        return 'Branch protection removed from "${args['branch']}".';
+
+      // ── Webhooks ──
+      case 'github_list_webhooks':
+        final whData = await settings.listWebhooks(
+          args['owner'] as String,
+          args['repo'] as String,
+        );
+        if (whData.isEmpty) return 'No webhooks found.';
+        return 'Webhooks for ${args['owner']}/${args['repo']}:\n'
+            '${whData.map((h) => '  #${h['id']}: ${h['config']['url']} (events: ${(h['events'] as List).join(', ')})').join('\n')}';
+
+      case 'github_create_webhook':
+        final whResult = await settings.createWebhook(
+          args['owner'] as String,
+          args['repo'] as String,
+          url: args['url'] as String,
+          contentType: args['content_type'] as String? ?? 'json',
+          secret: args['secret'] as String? ?? '',
+          events: (args['events'] as List?)?.cast<String>() ?? ['push'],
+        );
+        return 'Webhook #${whResult['id']} created: ${whResult['config']['url']}';
+
+      case 'github_delete_webhook':
+        await settings.deleteWebhook(
+          args['owner'] as String,
+          args['repo'] as String,
+          (args['hook_id'] as num).toInt(),
+        );
+        return 'Webhook #${args['hook_id']} deleted.';
+
+      // ── Deploy Keys ──
+      case 'github_list_deploy_keys':
+        final dkData = await settings.listDeployKeys(
+          args['owner'] as String,
+          args['repo'] as String,
+        );
+        if (dkData.isEmpty) return 'No deploy keys found.';
+        return 'Deploy keys for ${args['owner']}/${args['repo']}:\n'
+            '${dkData.map((k) => '  #${k['id']}: ${k['title']} (${k['key'].substring(0, 30)}...)').join('\n')}';
+
+      case 'github_create_deploy_key':
+        final dkResult = await settings.createDeployKey(
+          args['owner'] as String,
+          args['repo'] as String,
+          title: args['title'] as String,
+          key: args['key'] as String,
+          readOnly: args['read_only'] as bool? ?? true,
+        );
+        return 'Deploy key "${dkResult['title']}" created (id: ${dkResult['id']}).';
+
+      case 'github_delete_deploy_key':
+        await settings.deleteDeployKey(
+          args['owner'] as String,
+          args['repo'] as String,
+          (args['key_id'] as num).toInt(),
+        );
+        return 'Deploy key #${args['key_id']} deleted.';
+
       default:
         return 'Unknown GitHub tool: $name';
     }
@@ -591,6 +913,53 @@ class GithubIntegrationService {
       return data['message'] as String? ?? 'OK';
     }
     return 'No contents found.';
+  }
+
+  String _formatBranchProtection(Map<String, dynamic> bp) {
+    final rules = <String>[];
+    if (bp['required_status_checks'] != null) {
+      rules.add('✓ Required status checks');
+    }
+    if (bp['required_pull_request_reviews'] != null) {
+      final rev = bp['required_pull_request_reviews'] as Map<String, dynamic>;
+      rules.add(
+          '✓ Required PR reviews (${rev['required_approving_review_count'] ?? '?'} approvals)');
+    }
+    if (bp['enforce_admins'] != null) {
+      rules.add('✓ Enforced on admins');
+    }
+    if (bp['required_linear_history'] != null) {
+      rules.add('✓ Linear history required');
+    }
+    if (bp['allow_force_pushes'] != null) {
+      rules.add(
+          '${bp['allow_force_pushes']['enabled'] == true ? '⚠' : '✓'} Force pushes');
+    }
+    if (bp['allow_deletions'] != null) {
+      rules.add(
+          '${bp['allow_deletions']['enabled'] == true ? '⚠' : '✓'} Deletions');
+    }
+    if (bp['required_conversation_resolution'] != null) {
+      rules.add('✓ Required conversation resolution');
+    }
+    if (rules.isEmpty) rules.add('No protection rules configured.');
+    return 'Branch protection for "${bp['url']?.toString().split('/branches/').last ?? '?'}":\n'
+        '${rules.join('\n')}';
+  }
+
+  String _summarizeProtection(Map<String, dynamic> bp) {
+    final enabled = <String>[];
+    if (bp['required_status_checks'] != null) {
+      enabled.add('status checks');
+    }
+    if (bp['required_pull_request_reviews'] != null) {
+      enabled.add('PR reviews');
+    }
+    if (bp['enforce_admins'] != null && bp['enforce_admins']['enabled'] == true) {
+      enabled.add('admin enforcement');
+    }
+    if (enabled.isEmpty) return 'all rules removed';
+    return enabled.join(', ');
   }
 
   String _formatSize(int bytes) {

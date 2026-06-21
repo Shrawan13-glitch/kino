@@ -107,16 +107,59 @@ class GithubActionsService {
     return resp.bodyBytes;
   }
 
+  Future<Map<String, dynamic>> getRepoSecret(
+      String owner, String repo, String name) {
+    return _client.get('/repos/$owner/$repo/actions/secrets/$name');
+  }
+
   Future<List<Map<String, dynamic>>> listRepoSecrets(
       String owner, String repo) async {
     final data = await _client.get('/repos/$owner/$repo/actions/secrets');
     return (data['secrets'] as List?)?.cast<Map<String, dynamic>>() ?? [];
   }
 
+  Future<void> createOrUpdateRepoSecret(
+      String owner, String repo, String name, String value) {
+    return _client.put('/repos/$owner/$repo/actions/secrets/$name', body: {
+      'encrypted_value': value,
+    });
+  }
+
+  Future<void> deleteRepoSecret(
+      String owner, String repo, String name) {
+    return _client.delete('/repos/$owner/$repo/actions/secrets/$name');
+  }
+
+  Future<Map<String, dynamic>> getRepoVariable(
+      String owner, String repo, String name) {
+    return _client.get('/repos/$owner/$repo/actions/variables/$name');
+  }
+
   Future<List<Map<String, dynamic>>> listRepoVariables(
       String owner, String repo) async {
     final data = await _client.get('/repos/$owner/$repo/actions/variables');
     return (data['variables'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  Future<Map<String, dynamic>> createRepoVariable(
+      String owner, String repo,
+      String name, String value) {
+    return _client.post('/repos/$owner/$repo/actions/variables', body: {
+      'name': name,
+      'value': value,
+    });
+  }
+
+  Future<Map<String, dynamic>> updateRepoVariable(
+      String owner, String repo,
+      String name, String value) {
+    return _client.patch('/repos/$owner/$repo/actions/variables/$name',
+        body: {'value': value});
+  }
+
+  Future<void> deleteRepoVariable(
+      String owner, String repo, String name) {
+    return _client.delete('/repos/$owner/$repo/actions/variables/$name');
   }
 
   Future<Map<String, dynamic>> getWorkflowRunUsage(

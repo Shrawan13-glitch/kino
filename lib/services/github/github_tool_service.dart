@@ -758,6 +758,614 @@ class GithubToolService {
             'required': ['owner', 'repo', 'run_id'],
           },
         ),
+        // ── Repo Settings ──
+        OpenRouterService.makeToolDefinition(
+          name: 'github_update_repo_settings',
+          description:
+              'Configure repository settings: enable/disable issues, wiki, projects; '
+              'configure merge strategies (squash, merge, rebase, auto-merge); '
+              'set visibility; archive/unarchive; set homepage. Leave fields null to keep current values.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'homepage': {
+                'type': 'string',
+                'description': 'Repository website URL',
+              },
+              'has_issues': {
+                'type': 'boolean',
+                'description': 'Enable/disable Issues tab',
+              },
+              'has_projects': {
+                'type': 'boolean',
+                'description': 'Enable/disable Projects tab',
+              },
+              'has_wiki': {
+                'type': 'boolean',
+                'description': 'Enable/disable Wiki tab',
+              },
+              'allow_squash_merge': {
+                'type': 'boolean',
+                'description': 'Allow squash merging PRs',
+              },
+              'allow_merge_commit': {
+                'type': 'boolean',
+                'description': 'Allow merge commits in PRs',
+              },
+              'allow_rebase_merge': {
+                'type': 'boolean',
+                'description': 'Allow rebase merging PRs',
+              },
+              'allow_auto_merge': {
+                'type': 'boolean',
+                'description': 'Allow auto-merge for PRs',
+              },
+              'delete_branch_on_merge': {
+                'type': 'boolean',
+                'description': 'Auto-delete head branches after merge',
+              },
+              'archived': {
+                'type': 'boolean',
+                'description': 'Archive the repository (makes it read-only)',
+              },
+              'visibility': {
+                'type': 'string',
+                'description': 'Change repo visibility',
+                'enum': ['public', 'private', 'internal'],
+              },
+            },
+            'required': ['owner', 'repo'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_replace_topics',
+          description:
+              'Replace all topics on a repository with a new list.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'topics': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description': 'New list of topics',
+              },
+            },
+            'required': ['owner', 'repo', 'topics'],
+          },
+        ),
+
+        // ── Collaborators ──
+        OpenRouterService.makeToolDefinition(
+          name: 'github_list_collaborators',
+          description:
+              'List collaborators on a repository with their permission levels.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'permission': {
+                'type': 'string',
+                'description':
+                    'Filter by permission: pull, push, admin, maintain, triage',
+              },
+            },
+            'required': ['owner', 'repo'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_add_collaborator',
+          description:
+              'Add a collaborator to a repository with a specific permission level.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'username': {
+                'type': 'string',
+                'description': 'GitHub username to add',
+              },
+              'permission': {
+                'type': 'string',
+                'description':
+                    'Permission level: pull, push, admin, maintain, triage (default: push)',
+                'enum': ['pull', 'push', 'admin', 'maintain', 'triage'],
+              },
+            },
+            'required': ['owner', 'repo', 'username'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_remove_collaborator',
+          description: 'Remove a collaborator from a repository.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'username': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'username'],
+          },
+        ),
+
+        // ── Actions Secrets ──
+        OpenRouterService.makeToolDefinition(
+          name: 'github_list_secrets',
+          description:
+              'List all Actions secrets for a repository.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+            },
+            'required': ['owner', 'repo'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_create_secret',
+          description:
+              'Create or update a GitHub Actions repository secret.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'name': {
+                'type': 'string',
+                'description': 'Secret name (uppercase and underscores)',
+              },
+              'value': {
+                'type': 'string',
+                'description': 'Secret value',
+              },
+            },
+            'required': ['owner', 'repo', 'name', 'value'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_delete_secret',
+          description: 'Delete a GitHub Actions repository secret.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'name': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'name'],
+          },
+        ),
+
+        // ── Actions Variables ──
+        OpenRouterService.makeToolDefinition(
+          name: 'github_list_variables',
+          description:
+              'List all GitHub Actions variables for a repository.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+            },
+            'required': ['owner', 'repo'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_create_variable',
+          description:
+              'Create a new GitHub Actions variable for a repository.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'name': {
+                'type': 'string',
+                'description': 'Variable name',
+              },
+              'value': {
+                'type': 'string',
+                'description': 'Variable value',
+              },
+            },
+            'required': ['owner', 'repo', 'name', 'value'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_update_variable',
+          description: 'Update a GitHub Actions variable value.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'name': {'type': 'string'},
+              'value': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'name', 'value'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_delete_variable',
+          description: 'Delete a GitHub Actions variable.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'name': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'name'],
+          },
+        ),
+
+        // ── Environments ──
+        OpenRouterService.makeToolDefinition(
+          name: 'github_list_environments',
+          description:
+              'List all environments in a repository.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+            },
+            'required': ['owner', 'repo'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_create_environment',
+          description:
+              'Create or update a deployment environment with optional protection rules '
+              '(wait timer in minutes, required reviewers).',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'env': {
+                'type': 'string',
+                'description': 'Environment name',
+              },
+              'wait_timer': {
+                'type': 'integer',
+                'description':
+                    'Optional: wait time in minutes before deployments proceed',
+              },
+            },
+            'required': ['owner', 'repo', 'env'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_delete_environment',
+          description: 'Delete a deployment environment.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'env': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'env'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_list_env_secrets',
+          description:
+              'List all secrets for a deployment environment.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'env': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'env'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_create_env_secret',
+          description:
+              'Create or update a secret for a deployment environment.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'env': {'type': 'string'},
+              'name': {'type': 'string'},
+              'value': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'env', 'name', 'value'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_delete_env_secret',
+          description: 'Delete a secret from a deployment environment.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'env': {'type': 'string'},
+              'name': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'env', 'name'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_list_env_variables',
+          description:
+              'List all variables for a deployment environment.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'env': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'env'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_create_env_variable',
+          description:
+              'Create a new variable for a deployment environment.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'env': {'type': 'string'},
+              'name': {'type': 'string'},
+              'value': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'env', 'name', 'value'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_update_env_variable',
+          description: 'Update a variable in a deployment environment.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'env': {'type': 'string'},
+              'name': {'type': 'string'},
+              'value': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'env', 'name', 'value'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_delete_env_variable',
+          description: 'Delete a variable from a deployment environment.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'env': {'type': 'string'},
+              'name': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'env', 'name'],
+          },
+        ),
+
+        // ── Branch Protection ──
+        OpenRouterService.makeToolDefinition(
+          name: 'github_get_branch_protection',
+          description:
+              'Get the branch protection rules for a specific branch.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'branch': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'branch'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_update_branch_protection',
+          description:
+              'Enable or update branch protection rules: require PR reviews, status checks, '
+              'linear history, force push restrictions, and more. Set a flag to false/null to disable it.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'branch': {'type': 'string'},
+              'required_status_checks': {
+                'type': 'boolean',
+                'description':
+                    'Require status checks to pass before merging',
+              },
+              'required_pull_request_reviews': {
+                'type': 'boolean',
+                'description':
+                    'Require pull request reviews before merging',
+              },
+              'required_approving_review_count': {
+                'type': 'integer',
+                'description': 'Number of required reviewers (1-6)',
+              },
+              'dismiss_stale_reviews': {
+                'type': 'boolean',
+                'description':
+                    'Dismiss approving reviews when new commits are pushed',
+              },
+              'require_code_owner_reviews': {
+                'type': 'boolean',
+                'description': 'Require review from code owners',
+              },
+              'enforce_admins': {
+                'type': 'boolean',
+                'description':
+                    'Apply rules to administrators too',
+              },
+              'required_linear_history': {
+                'type': 'boolean',
+                'description': 'Prevent squash/merge commits',
+              },
+              'allow_force_pushes': {
+                'type': 'boolean',
+                'description': 'Allow force pushes to the branch',
+              },
+              'allow_deletions': {
+                'type': 'boolean',
+                'description': 'Allow deletions of the branch',
+              },
+              'required_conversation_resolution': {
+                'type': 'boolean',
+                'description':
+                    'Require all conversations to be resolved before merging',
+              },
+            },
+            'required': ['owner', 'repo', 'branch'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_delete_branch_protection',
+          description: 'Remove all branch protection rules from a branch.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'branch': {'type': 'string'},
+            },
+            'required': ['owner', 'repo', 'branch'],
+          },
+        ),
+
+        // ── Webhooks ──
+        OpenRouterService.makeToolDefinition(
+          name: 'github_list_webhooks',
+          description: 'List all webhooks configured on a repository.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+            },
+            'required': ['owner', 'repo'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_create_webhook',
+          description:
+              'Create a new webhook on a repository. The webhook will POST JSON payloads to the given URL.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'url': {
+                'type': 'string',
+                'description': 'The URL to receive webhook payloads',
+              },
+              'content_type': {
+                'type': 'string',
+                'description':
+                    'Payload format: json or form (default: json)',
+              },
+              'secret': {
+                'type': 'string',
+                'description': 'Optional webhook secret',
+              },
+              'events': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description':
+                    'Events to trigger on (default: ["push"])',
+              },
+            },
+            'required': ['owner', 'repo', 'url'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_delete_webhook',
+          description: 'Delete a webhook from a repository.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'hook_id': {
+                'type': 'integer',
+                'description': 'Webhook ID to delete',
+              },
+            },
+            'required': ['owner', 'repo', 'hook_id'],
+          },
+        ),
+
+        // ── Deploy Keys ──
+        OpenRouterService.makeToolDefinition(
+          name: 'github_list_deploy_keys',
+          description: 'List all deploy keys on a repository.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+            },
+            'required': ['owner', 'repo'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_create_deploy_key',
+          description:
+              'Add a new deploy key to a repository.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'title': {
+                'type': 'string',
+                'description': 'A name for the deploy key',
+              },
+              'key': {
+                'type': 'string',
+                'description': 'The public SSH key content',
+              },
+              'read_only': {
+                'type': 'boolean',
+                'description': 'If true, key has read-only access (default: true)',
+              },
+            },
+            'required': ['owner', 'repo', 'title', 'key'],
+          },
+        ),
+        OpenRouterService.makeToolDefinition(
+          name: 'github_delete_deploy_key',
+          description: 'Remove a deploy key from a repository.',
+          parameters: {
+            'type': 'object',
+            'properties': {
+              'owner': {'type': 'string'},
+              'repo': {'type': 'string'},
+              'key_id': {
+                'type': 'integer',
+                'description': 'Deploy key ID to remove',
+              },
+            },
+            'required': ['owner', 'repo', 'key_id'],
+          },
+        ),
+
         OpenRouterService.makeToolDefinition(
           name: 'github_get_user',
           description:
