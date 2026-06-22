@@ -23,7 +23,7 @@ class DatabaseHelper {
     final path = p.join(dir.path, fileName);
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -37,7 +37,8 @@ class DatabaseHelper {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         model TEXT,
-        system_prompt TEXT
+        system_prompt TEXT,
+        task_plan TEXT
       )
     ''');
     await db.execute('''
@@ -82,6 +83,11 @@ class DatabaseHelper {
       }
     }
     if (oldVersion < 5) {
+      try {
+        await db.execute('ALTER TABLE chats ADD COLUMN task_plan TEXT');
+      } catch (_) {}
+    }
+    if (oldVersion < 6) {
       try {
         await db.execute('ALTER TABLE chats ADD COLUMN task_plan TEXT');
       } catch (_) {}
