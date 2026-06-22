@@ -50,7 +50,7 @@ class GithubApiService {
         'owner': username,
         'name': templateRepo,
         'description': 'Personal TTS generator powered by ShryneTTS',
-        'public': true,
+        'private': false,
       }),
     );
 
