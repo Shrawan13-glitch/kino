@@ -23,7 +23,7 @@ class DatabaseHelper {
     final path = p.join(dir.path, fileName);
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -80,6 +80,11 @@ class DatabaseHelper {
       } catch (_) {
         // Column already exists from the v3 migration above
       }
+    }
+    if (oldVersion < 5) {
+      try {
+        await db.execute('ALTER TABLE chats ADD COLUMN task_plan TEXT');
+      } catch (_) {}
     }
   }
 

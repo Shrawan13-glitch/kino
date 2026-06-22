@@ -78,19 +78,9 @@ class ChatProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isGenerating => _isGenerating;
 
-  bool get hasActiveTaskPlan {
-    if (_activeAiMessage == null) return false;
-    return _activeAiMessage!.entries.any((e) =>
-        e is TaskPlanEntry &&
-        e.tasks.any((t) =>
-            t.status == TaskStatus.inProgress ||
-            t.status == TaskStatus.pending));
-  }
+  bool get hasActiveTaskPlan => _currentChat?.hasActiveTaskPlan ?? false;
 
-  TaskPlanEntry? get activeTaskPlan {
-    if (_activeAiMessage == null) return null;
-    return _activeAiMessage!.entries.whereType<TaskPlanEntry>().lastOrNull;
-  }
+  TaskPlanEntry? get activeTaskPlan => _currentChat?.taskPlan;
   bool get initialized => _initialized;
 
   String get _effectiveModel =>
@@ -160,6 +150,7 @@ class ChatProvider extends ChangeNotifier {
     _messages = await _db.getMessages(id);
     DebugService.instance.info('selectChat: loaded ${_messages.length} messages');
     await _migrateLegacyMessages();
+    _migrateTaskPlanFromMessages();
 
     _isLoading = false;
     notifyListeners();
@@ -785,17 +776,22 @@ class ChatProvider extends ChangeNotifier {
       OpenRouterService.makeToolDefinition(
         name: 'create_task_plan',
         description:
-            'Break down a complex query or project into a structured task list. '
-            'Use this when the user asks something multi-step — research, building a project, '
-            'or anything that benefits from a clear plan. Create the plan first, then work through '
-            'each task sequentially, updating their status as you go.',
+            'Break down a complex query or project into a structured todo list. '
+            'IMPORTANT: Only ONE todo list can be active at a time per chat. '
+            'If a todo list already exists with incomplete tasks, new tasks are APPENDED '
+            'to the existing list — they do NOT replace it. '
+            'To create a fresh standalone plan, complete all existing tasks first. '
+            'Create the plan first, then work through each task sequentially, '
+            'updating their status as you go. '
+            'When all tasks are completed the todo list is automatically cleared.',
         parameters: {
           'type': 'object',
           'properties': {
             'tasks': {
               'type': 'array',
               'description':
-                  'Array of tasks to perform, in order. Each task must have a brief unique id, '
+                  'Array of tasks to perform, in order. If a plan already exists, '
+                  'these are appended to it. Each task must have a brief unique id, '
                   'a short title, and a one-line description of what to do.',
               'items': {
                 'type': 'object',
@@ -823,8 +819,9 @@ class ChatProvider extends ChangeNotifier {
       OpenRouterService.makeToolDefinition(
         name: 'update_task_status',
         description:
-            'Update the status of a task in the current task plan. '
+            'Update the status of a task in the current todo list. '
             'Call this when you complete a task, start working on one, or if one fails. '
+            'When ALL tasks are marked completed, the todo list is automatically cleared. '
             'The user will see the task list update in real-time.',
         parameters: {
           'type': 'object',
@@ -841,6 +838,18 @@ class ChatProvider extends ChangeNotifier {
             },
           },
           'required': ['task_id', 'status'],
+        },
+      ),
+      OpenRouterService.makeToolDefinition(
+        name: 'clear_task_plan',
+        description:
+            'Clear the entire todo list, removing all tasks. '
+            'Use this when you want to discard the current plan and start fresh. '
+            'After calling this, you can create a new plan with create_task_plan.',
+        parameters: {
+          'type': 'object',
+          'properties': {},
+          'required': [],
         },
       ),
 
@@ -1038,12 +1047,21 @@ class ChatProvider extends ChangeNotifier {
           outputPath: outputPath,
         );
 
+      case 'clear_task_plan':
+        if (_currentChat?.taskPlan == null) {
+          return 'No todo list to clear.';
+        }
+        _currentChat = _currentChat!.copyWith(taskPlan: null);
+        await _db.updateChat(_currentChat!);
+        notifyListeners();
+        return 'Todo list cleared. You can now create a new plan.';
+
       case 'create_task_plan':
         final tasksRaw = arguments['tasks'] as List?;
         if (tasksRaw == null || tasksRaw.isEmpty) {
           return 'Error: tasks parameter is required for create_task_plan';
         }
-        final tasks = tasksRaw.map((t) {
+        final newTasks = tasksRaw.map((t) {
           final map = t as Map<String, dynamic>;
           return Task(
             id: map['id'] as String,
@@ -1052,10 +1070,22 @@ class ChatProvider extends ChangeNotifier {
           );
         }).toList();
 
-        final planEntry = TaskPlanEntry(tasks: tasks);
-        _activeAiMessage?.entries.add(planEntry);
+        TaskPlanEntry planEntry;
+        if (_currentChat?.taskPlan != null &&
+            _currentChat!.taskPlan!.tasks
+                .any((t) => t.status == TaskStatus.inProgress || t.status == TaskStatus.pending)) {
+          final existing = _currentChat!.taskPlan!;
+          existing.tasks.addAll(newTasks);
+          planEntry = existing;
+        } else {
+          planEntry = TaskPlanEntry(tasks: newTasks);
+        }
+
+        _currentChat = _currentChat!.copyWith(taskPlan: planEntry);
+        _saveTaskPlan();
+        _activeAiMessage?.entries.add(TaskPlanEntry(tasks: List.from(planEntry.tasks)));
         notifyListeners();
-        return 'Task plan created with ${tasks.length} tasks. Start working through them and update their status with update_task_status as you complete each one.';
+        return 'Task plan created with ${newTasks.length} tasks. Start working through them and update their status with update_task_status as you complete each one.';
 
       case 'update_task_status':
         final taskId = arguments['task_id'] as String?;
@@ -1067,16 +1097,31 @@ class ChatProvider extends ChangeNotifier {
           (s) => s.name == statusStr,
           orElse: () => TaskStatus.pending,
         );
-        final planEntry = _activeAiMessage?.entries
-            .whereType<TaskPlanEntry>()
-            .lastOrNull;
-        if (planEntry == null) {
+        if (_currentChat?.taskPlan == null) {
           return 'Error: no task plan found. Create one first with create_task_plan.';
         }
-        planEntry.updateTaskStatus(taskId, status);
+        _currentChat!.taskPlan!.updateTaskStatus(taskId, status);
         notifyListeners();
+
         final taskName =
-            planEntry.tasks.firstWhere((t) => t.id == taskId).title;
+            _currentChat!.taskPlan!.tasks.firstWhere((t) => t.id == taskId).title;
+
+        // Update the entry in the active message for persistence
+        if (_activeAiMessage != null) {
+          for (final entry in _activeAiMessage!.entries) {
+            if (entry is TaskPlanEntry) {
+              entry.updateTaskStatus(taskId, status);
+            }
+          }
+        }
+
+        if (_currentChat!.isTaskPlanComplete) {
+          _currentChat = _currentChat!.copyWith(taskPlan: null);
+          await _db.updateChat(_currentChat!);
+          return 'Task "$taskName" marked as $statusStr. All tasks completed! The todo list has been cleared.';
+        }
+
+        _saveTaskPlan();
         return 'Task "$taskName" updated to $statusStr.';
 
       default:
@@ -1221,4 +1266,32 @@ class ChatProvider extends ChangeNotifier {
     if (text.length <= 40) return text;
     return '${text.substring(0, 40)}...';
   }
+
+  void _migrateTaskPlanFromMessages() {
+    if (_currentChat?.taskPlan != null) return;
+    if (_messages.isEmpty) return;
+
+    TaskPlanEntry? latestPlan;
+    for (final msg in _messages.reversed) {
+      for (final entry in msg.entries.reversed) {
+        if (entry is TaskPlanEntry) {
+          latestPlan = entry;
+          break;
+        }
+      }
+      if (latestPlan != null) break;
+    }
+
+    if (latestPlan == null) return;
+    if (latestPlan.tasks.every((t) => t.status == TaskStatus.completed)) return;
+
+    _currentChat = _currentChat!.copyWith(taskPlan: latestPlan);
+    _saveTaskPlan();
+  }
+
+  Future<void> _saveTaskPlan() async {
+    if (_currentChat == null) return;
+    await _db.updateChat(_currentChat!);
+  }
+
 }
