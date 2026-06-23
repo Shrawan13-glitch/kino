@@ -189,6 +189,94 @@ class ToolExecutionService {
     }
   }
 
+  /// Run an arbitrary command string through the system shell (`/bin/sh -c`).
+  /// Unlike [runTool], this does NOT resolve the tool against the VFS —
+  /// it passes the command string directly to `sh -c`. This is useful for
+  /// running compound shell commands (pipes, redirects, variable expansion)
+  /// where the full command is already a single string.
+  Future<ToolResult> runShellCommand(
+    String command, {
+    String? workingDirectory,
+    Duration timeout = const Duration(seconds: 30),
+    Map<String, String>? extraEnv,
+  }) async {
+    final isAndroid = Platform.isAndroid;
+    final workDir = workingDirectory != null
+        ? _resolveVfsPath(workingDirectory)
+        : _vfsRoot;
+
+    final env = <String, String>{
+      'HOME': _vfsRoot,
+      'PATH': isAndroid
+          ? '$_vfsRoot:/system/bin:/system/xbin'
+          : '$_vfsRoot:/usr/bin:/usr/local/bin:/bin',
+      'VFS_ROOT': _vfsRoot,
+      ...?extraEnv,
+    };
+
+    try {
+      final executable = isAndroid ? '/system/bin/sh' : '/bin/sh';
+      final process = await Process.start(
+        executable,
+        ['-c', command],
+        workingDirectory: workDir,
+        environment: env,
+      );
+
+      await process.stdin.close();
+
+      final stdoutBuf = StringBuffer();
+      final stderrBuf = StringBuffer();
+      var stdoutLen = 0;
+      var stderrLen = 0;
+
+      await Future.wait([
+        process.stdout.transform(utf8.decoder).forEach((chunk) {
+          if (stdoutLen < _maxOutputSize) {
+            stdoutBuf.write(chunk);
+            stdoutLen += chunk.length;
+          }
+        }),
+        process.stderr.transform(utf8.decoder).forEach((chunk) {
+          if (stderrLen < _maxOutputSize) {
+            stderrBuf.write(chunk);
+            stderrLen += chunk.length;
+          }
+        }),
+      ]);
+
+      final exitCode =
+          await process.exitCode.timeout(timeout, onTimeout: () {
+        process.kill();
+        return -1;
+      });
+
+      var stdout = stdoutBuf.toString();
+      var stderr = stderrBuf.toString();
+
+      if (stdoutLen >= _maxOutputSize) stdout += '\n... (truncated)';
+      if (stderrLen >= _maxOutputSize) stderr += '\n... (truncated)';
+
+      return ToolResult(
+        exitCode: exitCode,
+        stdout: stdout,
+        stderr: stderr,
+      );
+    } on TimeoutException {
+      return ToolResult(
+        exitCode: -1,
+        stdout: '',
+        stderr: 'Execution timed out after ${timeout.inSeconds} seconds',
+      );
+    } catch (e) {
+      return ToolResult(
+        exitCode: -1,
+        stdout: '',
+        stderr: 'Failed to execute command: $e',
+      );
+    }
+  }
+
   String _normalizePath(String vfsPath) {
     return vfsPath.startsWith('/') ? vfsPath : '/$vfsPath';
   }

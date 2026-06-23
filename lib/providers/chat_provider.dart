@@ -22,6 +22,7 @@ import '../utils/content_parser.dart';
 import 'settings_provider.dart';
 import '../services/debug_service.dart';
 import '../services/tool_execution.dart';
+import '../services/vfs/vfs_shell.dart';
 import '../services/http_service.dart';
 import '../services/foreground_service.dart';
 
@@ -34,6 +35,7 @@ class ChatProvider extends ChangeNotifier {
   late final SearchService _searchService;
   late final WebFetchService _webFetchService;
   final ToolExecutionService _toolExec = ToolExecutionService();
+  final VfsShell _vfsShell = VfsShell();
   final GithubAuthService _githubAuth = GithubAuthService();
   final HttpService _httpService = HttpService();
   GithubIntegrationService? _githubIntegration;
@@ -860,6 +862,33 @@ class ChatProvider extends ChangeNotifier {
         },
       ),
 
+      OpenRouterService.makeToolDefinition(
+        name: 'execute_bash',
+        description:
+            'Run a bash command in the VFS shell. Supports all common bash built-ins (cd, pwd, ls, cat, '
+            'echo, mkdir, rm, cp, mv, touch, head, tail, export, env, etc.) as well as external '
+            'commands via the system shell (/bin/sh). The shell maintains state across calls: '
+            'the current working directory, environment variables, and directory stack persist. '
+            'Use cd to navigate, pipes and redirects work naturally. '
+            'The working directory is rooted in the VFS (virtual file system) so all paths are '
+            'VFS-relative. Use this to explore the filesystem, run scripts, manipulate files, '
+            'and execute any command that would work in a normal shell.',
+        parameters: {
+          'type': 'object',
+          'properties': {
+            'command': {
+              'type': 'string',
+              'description':
+                  'The bash command to execute. Can be a simple command (ls -la), '
+                  'compound command with pipes (cat file | grep foo), '
+                  'or chained commands (cd /projects && npm install). '
+                  'State is persisted between calls: cwd, env vars, dir stack.',
+            },
+          },
+          'required': ['command'],
+        },
+      ),
+
       if (_githubIntegration != null) ...GithubToolService.toolDefinitions,
     ];
   }
@@ -1130,6 +1159,14 @@ class ChatProvider extends ChangeNotifier {
 
         _saveTaskPlan();
         return 'Task "$taskName" updated to $statusStr.';
+
+      case 'execute_bash':
+        final bashCommand = arguments['command'] as String?;
+        if (bashCommand == null || bashCommand.isEmpty) {
+          return 'Error: command parameter is required for execute_bash';
+        }
+        final shellResult = await _vfsShell.execute(bashCommand);
+        return shellResult.full;
 
       default:
         if (name.startsWith('github_')) {
