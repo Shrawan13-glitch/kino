@@ -253,8 +253,13 @@ class VfsShell {
             return result;
           }
         } catch (_) {
-          // Parsing failed, fall through to existing behavior
+          // Parsing failed — fall through to system shell below
         }
+        // Parser couldn't handle it; run full command through system shell
+        final result = await _runInShell(input);
+        _lastExitCode = result.exitCode;
+        _pipeStatusString = _lastExitCode.toString();
+        return result;
       }
 
       // Existing path for simple commands
