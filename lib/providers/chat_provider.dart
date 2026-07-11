@@ -528,9 +528,12 @@ class ChatProvider extends ChangeNotifier {
   }
 
   List<Map<String, dynamic>> _buildToolDefinitions() {
+    bool toolEnabled(String name) => _settingsProvider.isToolEnabled(name);
+
     return <Map<String, dynamic>>[
-      OpenRouterService.makeToolDefinition(
-        name: 'web_search',
+      if (toolEnabled('web_search'))
+        OpenRouterService.makeToolDefinition(
+          name: 'web_search',
         description:
             'Search the web for current information. Returns up to 10 results with titles, URLs, and summaries. Use this to find recent news, facts, or anything that needs up-to-date information.',
         parameters: {
@@ -544,8 +547,9 @@ class ChatProvider extends ChangeNotifier {
           'required': ['query'],
         },
       ),
-      OpenRouterService.makeToolDefinition(
-        name: 'fetch_url',
+      if (toolEnabled('fetch_url'))
+        OpenRouterService.makeToolDefinition(
+          name: 'fetch_url',
         description:
             'Fetch and read text content of a web page. Uses a simple HTTP request. May fail on sites that require JavaScript or have bot protection (Cloudflare, etc.). Returns stripped text up to ~50KB.',
         parameters: {
@@ -559,8 +563,9 @@ class ChatProvider extends ChangeNotifier {
           'required': ['url'],
         },
       ),
-      OpenRouterService.makeToolDefinition(
-        name: 'power_fetch_url',
+      if (toolEnabled('power_fetch_url'))
+        OpenRouterService.makeToolDefinition(
+          name: 'power_fetch_url',
         description:
             'Fetch a web page using a headless WebView (full browser engine). Renders JavaScript and bypasses most bot protection. Slower but more reliable than fetch_url. Returns stripped text up to ~50KB.',
         parameters: {
@@ -574,8 +579,9 @@ class ChatProvider extends ChangeNotifier {
           'required': ['url'],
         },
       ),
-      OpenRouterService.makeToolDefinition(
-        name: 'http_request',
+      if (toolEnabled('http_request'))
+        OpenRouterService.makeToolDefinition(
+          name: 'http_request',
         description:
             'Make a full HTTP request to any URL with complete control. '
             'Supports all methods, custom headers, request body, timeout, and redirect control. '
@@ -627,8 +633,9 @@ class ChatProvider extends ChangeNotifier {
         },
       ),
 
-      OpenRouterService.makeToolDefinition(
-        name: 'write_file',
+      if (toolEnabled('write_file'))
+        OpenRouterService.makeToolDefinition(
+          name: 'write_file',
         description:
             'Write content to a file in the VFS. Creates parent directories if needed. Use this to save scripts, notes, data, or any text content.',
         parameters: {
@@ -647,8 +654,9 @@ class ChatProvider extends ChangeNotifier {
           'required': ['path', 'content'],
         },
       ),
-      OpenRouterService.makeToolDefinition(
-        name: 'read_file',
+      if (toolEnabled('read_file'))
+        OpenRouterService.makeToolDefinition(
+          name: 'read_file',
         description:
             'Read the contents of a file from the VFS. Returns the file content as text. Large files over ~50KB are truncated; read in chunks using read_file with offset.',
         parameters: {
@@ -663,8 +671,9 @@ class ChatProvider extends ChangeNotifier {
           'required': ['path'],
         },
       ),
-      OpenRouterService.makeToolDefinition(
-        name: 'list_dir',
+      if (toolEnabled('list_dir'))
+        OpenRouterService.makeToolDefinition(
+          name: 'list_dir',
         description:
             'List contents of a directory in the VFS. Shows files and directories with sizes. Use this to explore the VFS and find files.',
         parameters: {
@@ -679,8 +688,9 @@ class ChatProvider extends ChangeNotifier {
           'required': [],
         },
       ),
-      OpenRouterService.makeToolDefinition(
-        name: 'delete_file',
+      if (toolEnabled('delete_file'))
+        OpenRouterService.makeToolDefinition(
+          name: 'delete_file',
         description:
             'Delete a file or directory from the VFS. Directories are deleted recursively.',
         parameters: {
@@ -694,8 +704,9 @@ class ChatProvider extends ChangeNotifier {
           'required': ['path'],
         },
       ),
-      OpenRouterService.makeToolDefinition(
-        name: 'create_dir',
+      if (toolEnabled('create_dir'))
+        OpenRouterService.makeToolDefinition(
+          name: 'create_dir',
         description:
             'Create a directory in the VFS. Creates parent directories as needed.',
         parameters: {
@@ -709,8 +720,9 @@ class ChatProvider extends ChangeNotifier {
           'required': ['path'],
         },
       ),
-      OpenRouterService.makeToolDefinition(
-        name: 'generate_pdf',
+      if (toolEnabled('generate_pdf'))
+        OpenRouterService.makeToolDefinition(
+          name: 'generate_pdf',
         description:
             'Generate a PDF document from HTML content. Renders HTML with full CSS support using native WebView. '
             'Provide a full HTML page including <html>, <head>, and <body> tags. Uses CSS page-break for multi-page.',
@@ -732,8 +744,9 @@ class ChatProvider extends ChangeNotifier {
           'required': ['html', 'output'],
         },
       ),
-      OpenRouterService.makeToolDefinition(
-        name: 'generate_speech',
+      if (toolEnabled('generate_speech'))
+        OpenRouterService.makeToolDefinition(
+          name: 'generate_speech',
         description:
             'Generate high-quality speech audio from text using ShryneTTS. '
             'Converts text to natural-sounding speech with multiple voice options. '
@@ -780,8 +793,9 @@ class ChatProvider extends ChangeNotifier {
         },
       ),
 
-      OpenRouterService.makeToolDefinition(
-        name: 'create_task_plan',
+      if (toolEnabled('create_task_plan'))
+        OpenRouterService.makeToolDefinition(
+          name: 'create_task_plan',
         description:
             'Break down a complex query or project into a structured todo list. '
             'IMPORTANT: Only ONE todo list can be active at a time per chat. '
@@ -823,8 +837,9 @@ class ChatProvider extends ChangeNotifier {
           'required': ['tasks'],
         },
       ),
-      OpenRouterService.makeToolDefinition(
-        name: 'update_task_status',
+      if (toolEnabled('update_task_status'))
+        OpenRouterService.makeToolDefinition(
+          name: 'update_task_status',
         description:
             'Update the status of a task in the current todo list. '
             'Call this when you complete a task, start working on one, or if one fails. '
@@ -847,8 +862,9 @@ class ChatProvider extends ChangeNotifier {
           'required': ['task_id', 'status'],
         },
       ),
-      OpenRouterService.makeToolDefinition(
-        name: 'clear_task_plan',
+      if (toolEnabled('clear_task_plan'))
+        OpenRouterService.makeToolDefinition(
+          name: 'clear_task_plan',
         description:
             'Clear the entire todo list, removing all tasks. '
             'Use this when you want to discard the current plan and start fresh. '
@@ -860,12 +876,19 @@ class ChatProvider extends ChangeNotifier {
         },
       ),
 
-      if (_githubIntegration != null) ...GithubToolService.toolDefinitions,
+      if (_githubIntegration != null)
+        ...GithubToolService.toolDefinitions.where((t) {
+          final name = t['function']?['name'] as String? ?? '';
+          return _settingsProvider.isToolEnabled(name);
+        }),
     ];
   }
 
   Future<String> _executeTool(
       String name, Map<String, dynamic> arguments) async {
+    if (!_settingsProvider.isToolEnabled(name)) {
+      return 'Error: Tool "$name" is disabled. Enable it in the Tools menu.';
+    }
     switch (name) {
       case 'web_search':
         final query = arguments['query'] as String?;

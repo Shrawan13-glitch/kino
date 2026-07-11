@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../constants.dart';
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
+import 'tool_categories_sheet.dart';
 
 class ChatInputBar extends StatefulWidget {
   const ChatInputBar({super.key});
@@ -128,6 +129,35 @@ class _ChatInputBarState extends State<ChatInputBar> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: IconButton(
+                onPressed: () => ToolCategoriesSheet.show(context),
+                icon: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface(context),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.border(context).withValues(alpha: 0.5),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: AppColors.textSecondary(context),
+                    size: 22,
+                  ),
+                ),
+                splashRadius: 20,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
+                ),
+              ),
+            ),
             Expanded(
               child: Container(
                 constraints: const BoxConstraints(maxHeight: 140),

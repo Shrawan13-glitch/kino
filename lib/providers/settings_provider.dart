@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../database/database_helper.dart';
 import '../models/ai_model.dart';
+import '../models/tool_category.dart';
 import '../services/github/github_api_service.dart';
 
 class SettingsProvider extends ChangeNotifier {
@@ -19,6 +20,7 @@ class SettingsProvider extends ChangeNotifier {
   String _githubToken = '';
   String _githubUsername = '';
   String _githubClientId = '';
+  List<String> _enabledToolCategories = [];
 
   ThemeMode get themeMode => _themeMode;
   String get apiKey => _apiKey;
@@ -39,6 +41,7 @@ class SettingsProvider extends ChangeNotifier {
   String get githubClientId => _githubClientId;
   bool get isGithubConnected => _githubToken.isNotEmpty;
   bool get hasGithubClientId => _githubClientId.isNotEmpty;
+  List<String> get enabledToolCategories => _enabledToolCategories;
 
   static const String defaultAppPrompt = '''You are Kino, an AI agent with tools. You have full access to the internet and the user's GitHub account.
 
@@ -126,6 +129,18 @@ The task plan is displayed to the user so they can see your progress in real-tim
     _githubUsername = (await _db.getSetting('github_username')) ?? '';
     _githubClientId = (await _db.getSetting('github_client_id')) ??
         GithubApiService.defaultClientId;
+
+    final enabledCats = await _db.getSetting('enabled_tool_categories');
+    if (enabledCats != null && enabledCats.isNotEmpty) {
+      _enabledToolCategories = (jsonDecode(enabledCats) as List)
+          .map((e) => e.toString())
+          .toList();
+    } else {
+      _enabledToolCategories = ToolCategory.values
+          .where((c) => !isGithubCategory(c))
+          .map((c) => c.name)
+          .toList();
+    }
 
     final cached = await _db.getSetting('cached_models');
     if (cached != null && cached.isNotEmpty) {
@@ -216,6 +231,30 @@ The task plan is displayed to the user so they can see your progress in real-tim
     _githubUsername = '';
     await _db.setSetting('github_token', '');
     await _db.setSetting('github_username', '');
+    notifyListeners();
+  }
+
+  bool isToolCategoryEnabled(ToolCategory category) {
+    return _enabledToolCategories.contains(category.name);
+  }
+
+  bool isToolEnabled(String toolName) {
+    for (final entry in kToolsByCategory.entries) {
+      if (entry.value.contains(toolName)) {
+        return _enabledToolCategories.contains(entry.key.name);
+      }
+    }
+    return false;
+  }
+
+  Future<void> toggleToolCategory(ToolCategory category) async {
+    if (_enabledToolCategories.contains(category.name)) {
+      _enabledToolCategories.remove(category.name);
+    } else {
+      _enabledToolCategories.add(category.name);
+    }
+    await _db.setSetting(
+        'enabled_tool_categories', jsonEncode(_enabledToolCategories));
     notifyListeners();
   }
 
