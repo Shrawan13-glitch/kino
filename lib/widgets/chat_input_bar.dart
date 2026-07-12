@@ -92,7 +92,8 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   @override
   void didChangeMetrics() {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final bottom = WidgetsBinding
+        .instance.platformDispatcher.views.first.viewInsets.bottom;
     if (bottom == 0 && _focusNode.hasFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
