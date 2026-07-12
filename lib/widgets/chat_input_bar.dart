@@ -32,6 +32,9 @@ class _ChatInputBarState extends State<ChatInputBar>
   MicState _micState = MicState.idle;
   late AnimationController _pulseController;
 
+  VoidCallback? _focusListener;
+  VoidCallback? _controllerListener;
+
   static const double _collapsedHeight = 52;
   static const double _expandedHeight = 140;
   static const double _collapsedRadius = 28;
@@ -58,7 +61,7 @@ class _ChatInputBarState extends State<ChatInputBar>
       duration: const Duration(milliseconds: 1200),
     );
 
-    _focusNode.addListener(() {
+    _focusListener = () {
       if (_focusNode.hasFocus) {
         _morphController.forward();
       } else {
@@ -66,14 +69,16 @@ class _ChatInputBarState extends State<ChatInputBar>
           _morphController.reverse();
         }
       }
-    });
+    };
+    _focusNode.addListener(_focusListener!);
 
-    _controller.addListener(() {
+    _controllerListener = () {
       final has = _controller.text.trim().isNotEmpty;
       if (has != _hasText) {
         setState(() => _hasText = has);
       }
-    });
+    };
+    _controller.addListener(_controllerListener!);
 
     _initSpeech();
   }
@@ -81,12 +86,14 @@ class _ChatInputBarState extends State<ChatInputBar>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _morphController.dispose();
-    _pulseController.dispose();
+    _speech.cancel();
+    if (_focusListener != null) _focusNode.removeListener(_focusListener!);
+    if (_controllerListener != null) _controller.removeListener(_controllerListener!);
     _focusNode.dispose();
     _controller.dispose();
+    _morphController.dispose();
+    _pulseController.dispose();
     _scrollController.dispose();
-    _speech.cancel();
     super.dispose();
   }
 
