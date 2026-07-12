@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
 import '../constants.dart';
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
 import 'tool_categories_sheet.dart';
+
+enum MicState { idle, listening, processing, error }
 
 class ChatInputBar extends StatefulWidget {
   const ChatInputBar({super.key});
@@ -13,7 +18,7 @@ class ChatInputBar extends StatefulWidget {
 }
 
 class _ChatInputBarState extends State<ChatInputBar>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   final _scrollController = ScrollController();
@@ -23,14 +28,20 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   bool _hasText = false;
 
+  final SpeechToText _speech = SpeechToText();
+  MicState _micState = MicState.idle;
+  late AnimationController _pulseController;
+
   static const double _collapsedHeight = 52;
-  static const double _expandedHeight = 180;
+  static const double _expandedHeight = 140;
   static const double _collapsedRadius = 28;
   static const double _expandedRadius = 24;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _morphController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 320),
@@ -40,6 +51,11 @@ class _ChatInputBarState extends State<ChatInputBar>
       parent: _morphController,
       curve: Curves.easeOutCubic,
       reverseCurve: Curves.easeInCubic,
+    );
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
     );
 
     _focusNode.addListener(() {
@@ -58,15 +74,124 @@ class _ChatInputBarState extends State<ChatInputBar>
         setState(() => _hasText = has);
       }
     });
+
+    _initSpeech();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _morphController.dispose();
+    _pulseController.dispose();
     _focusNode.dispose();
     _controller.dispose();
     _scrollController.dispose();
+    _speech.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    if (bottom == 0 && _focusNode.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_controller.text.trim().isEmpty && mounted) {
+          _focusNode.unfocus();
+        }
+      });
+    }
+  }
+
+  Future<void> _initSpeech() async {
+    try {
+      await _speech.initialize(
+        onError: (error) {
+          if (mounted) {
+            setState(() {
+              _micState = MicState.error;
+            });
+            _pulseController.stop();
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted && _micState == MicState.error) {
+                setState(() => _micState = MicState.idle);
+              }
+            });
+          }
+        },
+        onStatus: (status) {
+          if (status == 'notListening' || status == 'done' || status == 'canceled') {
+            if (mounted && _micState == MicState.listening) {
+              _pulseController.stop();
+              setState(() => _micState = MicState.idle);
+            }
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('Speech init failed: $e');
+    }
+  }
+
+  Future<void> _toggleMic() async {
+    if (_micState == MicState.listening) {
+      await _speech.stop();
+      _pulseController.stop();
+      setState(() => _micState = MicState.idle);
+      return;
+    }
+
+    if (!_speech.isAvailable) {
+      await _initSpeech();
+      if (!_speech.isAvailable) {
+        setState(() {
+          _micState = MicState.error;
+        });
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) setState(() => _micState = MicState.idle);
+        });
+        return;
+      }
+    }
+
+    setState(() {
+      _micState = MicState.listening;
+    });
+    _pulseController.repeat(reverse: true);
+
+    await _speech.listen(
+      onResult: _onSpeechResult,
+      listenOptions: SpeechListenOptions(
+        localeId: 'en_US',
+        listenFor: const Duration(seconds: 30),
+        pauseFor: const Duration(seconds: 3),
+        cancelOnError: true,
+        partialResults: true,
+      ),
+    );
+  }
+
+  void _onSpeechResult(SpeechRecognitionResult result) {
+    if (!mounted) return;
+
+    if (result.recognizedWords.isNotEmpty) {
+      final currentText = _controller.text;
+      final separator = currentText.isEmpty ? '' : ' ';
+      final newText = '$currentText$separator${result.recognizedWords}';
+
+      _controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newText.length),
+      );
+
+      if (!_morphController.isCompleted) {
+        _morphController.forward();
+      }
+    }
+
+    if (result.finalResult) {
+      _pulseController.stop();
+      setState(() => _micState = MicState.idle);
+    }
   }
 
   void _send() {
@@ -121,7 +246,7 @@ class _ChatInputBarState extends State<ChatInputBar>
                 ? const BoxConstraints(maxHeight: _expandedHeight)
                 : null,
             decoration: BoxDecoration(
-              color: AppColors.pillBg(context),
+              color: AppColors.surface(context),
               borderRadius: BorderRadius.circular(currentRadius),
               border: Border.all(
                 color: isExpanded
@@ -140,7 +265,7 @@ class _ChatInputBarState extends State<ChatInputBar>
             child: ClipRRect(
               borderRadius: BorderRadius.circular(currentRadius),
               child: isExpanded
-                  ? _buildExpandedLayout(t)
+                  ? _buildExpandedLayout()
                   : _buildCollapsedLayout(),
             ),
           ),
@@ -151,6 +276,7 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   Widget _buildCollapsedLayout() {
     final isGenerating = context.watch<ChatProvider>().isGenerating;
+    final displayText = _controller.text.trim();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
@@ -166,14 +292,26 @@ class _ChatInputBarState extends State<ChatInputBar>
                   _focusNode.requestFocus();
                 });
               },
-              child: Text(
-                'Type a message...',
-                style: TextStyle(
-                  color: AppColors.textSecondary(context).withValues(alpha: 0.7),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
+              child: displayText.isNotEmpty
+                  ? Text(
+                      displayText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    )
+                  : Text(
+                      'Type a message...',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context)
+                            .withValues(alpha: 0.7),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
             ),
           ),
           if (!isGenerating) ...[
@@ -191,7 +329,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     );
   }
 
-  Widget _buildExpandedLayout(double t) {
+  Widget _buildExpandedLayout() {
     final isGenerating = context.watch<ChatProvider>().isGenerating;
 
     return Column(
@@ -213,10 +351,13 @@ class _ChatInputBarState extends State<ChatInputBar>
               fontWeight: FontWeight.w500,
             ),
             decoration: InputDecoration(
-              hintText: 'Type a message...',
+              hintText: _micState == MicState.listening
+                  ? 'Listening...'
+                  : 'Type a message...',
               hintStyle: TextStyle(
-                color:
-                    AppColors.textSecondary(context).withValues(alpha: 0.6),
+                color: _micState == MicState.listening
+                    ? AppColors.sendButton
+                    : AppColors.textSecondary(context).withValues(alpha: 0.6),
                 fontWeight: FontWeight.w400,
               ),
               border: InputBorder.none,
@@ -260,7 +401,7 @@ class _ChatInputBarState extends State<ChatInputBar>
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: AppColors.surface(context).withValues(alpha: 0.6),
+          color: AppColors.surfaceLight(context).withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(size / 2),
         ),
         child: Icon(
@@ -271,35 +412,61 @@ class _ChatInputBarState extends State<ChatInputBar>
       ),
       splashRadius: size / 2,
       padding: EdgeInsets.zero,
-      constraints: BoxConstraints(
-        minWidth: size,
-        minHeight: size,
-      ),
+      constraints: BoxConstraints(minWidth: size, minHeight: size),
     );
   }
 
   Widget _buildMicButton({required double size}) {
+    Color bgColor;
+    Color iconColor;
+    IconData iconData;
+
+    switch (_micState) {
+      case MicState.idle:
+        bgColor = AppColors.surfaceLight(context).withValues(alpha: 0.6);
+        iconColor = AppColors.textSecondary(context);
+        iconData = Icons.mic_none_rounded;
+      case MicState.listening:
+        bgColor = AppColors.sendButton.withValues(alpha: 0.15);
+        iconColor = AppColors.sendButton;
+        iconData = Icons.mic_rounded;
+      case MicState.processing:
+        bgColor = AppColors.primary.withValues(alpha: 0.15);
+        iconColor = AppColors.primary;
+        iconData = Icons.mic_none_rounded;
+      case MicState.error:
+        bgColor = AppColors.error.withValues(alpha: 0.15);
+        iconColor = AppColors.error;
+        iconData = Icons.mic_off_rounded;
+    }
+
     return IconButton(
-      onPressed: () {},
+      onPressed: _micState == MicState.processing ? null : _toggleMic,
       icon: Container(
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: AppColors.surface(context).withValues(alpha: 0.6),
+          color: bgColor,
           borderRadius: BorderRadius.circular(size / 2),
         ),
-        child: Icon(
-          Icons.mic_none_rounded,
-          color: AppColors.textSecondary(context),
-          size: size * 0.55,
-        ),
+        child: _micState == MicState.listening
+            ? AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  final scale = 1.0 + _pulseController.value * 0.15;
+                  return Transform.scale(
+                    scale: scale,
+                    child: Icon(iconData, color: iconColor, size: size * 0.5),
+                  );
+                },
+              )
+            : _micState == MicState.error
+                ? Icon(iconData, color: iconColor, size: size * 0.5)
+                : Icon(iconData, color: iconColor, size: size * 0.55),
       ),
       splashRadius: size / 2,
       padding: EdgeInsets.zero,
-      constraints: BoxConstraints(
-        minWidth: size,
-        minHeight: size,
-      ),
+      constraints: BoxConstraints(minWidth: size, minHeight: size),
     );
   }
 
@@ -328,10 +495,7 @@ class _ChatInputBarState extends State<ChatInputBar>
       ),
       splashRadius: size / 2,
       padding: EdgeInsets.zero,
-      constraints: BoxConstraints(
-        minWidth: size,
-        minHeight: size,
-      ),
+      constraints: BoxConstraints(minWidth: size, minHeight: size),
     );
   }
 
@@ -356,10 +520,7 @@ class _ChatInputBarState extends State<ChatInputBar>
       ),
       splashRadius: size / 2,
       padding: EdgeInsets.zero,
-      constraints: BoxConstraints(
-        minWidth: size,
-        minHeight: size,
-      ),
+      constraints: BoxConstraints(minWidth: size, minHeight: size),
     );
   }
 
