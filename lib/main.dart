@@ -25,7 +25,15 @@ void main() async {
       providers: [
         ChangeNotifierProvider.value(value: settingsProvider),
         ChangeNotifierProvider(
-          create: (_) => ChatProvider(settingsProvider)..initialize(),
+          create: (_) {
+            final chat = ChatProvider(settingsProvider);
+            // Defer async init until after the first frame so create() does not
+            // race with the initial InheritedWidget dependency wiring.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              chat.initialize();
+            });
+            return chat;
+          },
         ),
         ChangeNotifierProvider.value(value: vfsProvider),
       ],

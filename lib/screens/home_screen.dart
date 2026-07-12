@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (!_isSidebarOpen) {
       FocusScope.of(context).unfocus();
     }
-    
+
     if (_isSidebarOpen) {
       _closeSidebar();
     } else {
@@ -60,19 +60,20 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _onHorizontalDragUpdate(DragUpdateDetails details) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery.sizeOf(context).width;
     final delta = details.primaryDelta ?? 0;
-    
+
     setState(() {
       // Update drag progress based on finger movement
-      _dragProgress = (_sidebarController.value + (delta / screenWidth)).clamp(0.0, 1.0);
+      _dragProgress =
+          (_sidebarController.value + (delta / screenWidth)).clamp(0.0, 1.0);
       _sidebarController.value = _dragProgress;
     });
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
-    
+
     // Determine whether to open or close based on velocity and position
     if (velocity.abs() > 300) {
       // Fast swipe - use velocity direction
@@ -93,8 +94,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
     return PopScope(
       canPop: !_isSidebarOpen,
       onPopInvokedWithResult: (didPop, result) {
@@ -104,44 +105,45 @@ class _HomeScreenState extends State<HomeScreen>
       },
       child: Scaffold(
         backgroundColor: AppColors.sidebarBg(context),
-        body: AnimatedBuilder(
-          animation: _sidebarController,
-          builder: (context, child) {
-            final progress = _sidebarController.value;
-            
-            return Stack(
-              children: [
-                // Sidebar (full width, always in the background)
-                Positioned.fill(
-                  child: Sidebar(onClose: _closeSidebar),
-                ),
-                
-                // Chat screen that slides over the sidebar
-                Transform.translate(
+        body: Stack(
+          children: [
+            // Sidebar stays mounted; not rebuilt every animation tick.
+            Positioned.fill(
+              child: Sidebar(onClose: _closeSidebar),
+            ),
+            // Only the transform rebuilds on animation ticks; ChatScreen is
+            // passed as AnimatedBuilder.child so its Element/State stay stable.
+            AnimatedBuilder(
+              animation: _sidebarController,
+              child: GestureDetector(
+                onHorizontalDragStart: _onHorizontalDragStart,
+                onHorizontalDragUpdate: _onHorizontalDragUpdate,
+                onHorizontalDragEnd: _onHorizontalDragEnd,
+                child: ChatScreen(onMenuTap: _toggleSidebar),
+              ),
+              builder: (context, child) {
+                final progress = _sidebarController.value;
+                return Transform.translate(
                   offset: Offset(screenWidth * progress, 0),
-                  child: GestureDetector(
-                    onHorizontalDragStart: _onHorizontalDragStart,
-                    onHorizontalDragUpdate: _onHorizontalDragUpdate,
-                    onHorizontalDragEnd: _onHorizontalDragEnd,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        boxShadow: progress > 0
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.3 * progress),
-                                  blurRadius: 20,
-                                  offset: const Offset(-4, 0),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: ChatScreen(onMenuTap: _toggleSidebar),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: progress > 0
+                          ? [
+                              BoxShadow(
+                                color: Colors.black
+                                    .withValues(alpha: 0.3 * progress),
+                                blurRadius: 20,
+                                offset: const Offset(-4, 0),
+                              ),
+                            ]
+                          : null,
                     ),
+                    child: child,
                   ),
-                ),
-              ],
-            );
-          },
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

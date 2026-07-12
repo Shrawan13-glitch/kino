@@ -18,7 +18,7 @@ class ChatInputBar extends StatefulWidget {
 }
 
 class _ChatInputBarState extends State<ChatInputBar>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with TickerProviderStateMixin {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   final _scrollController = ScrollController();
@@ -27,6 +27,8 @@ class _ChatInputBarState extends State<ChatInputBar>
   late Animation<double> _morphAnimation;
 
   bool _hasText = false;
+  // Tracks keyboard inset so we only unfocus on close, not on first frame.
+  double _lastViewInsetBottom = 0;
 
   final SpeechToText _speech = SpeechToText();
   MicState _micState = MicState.idle;
@@ -43,7 +45,6 @@ class _ChatInputBarState extends State<ChatInputBar>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
 
     _morphController = AnimationController(
       vsync: this,
@@ -62,17 +63,17 @@ class _ChatInputBarState extends State<ChatInputBar>
     );
 
     _focusListener = () {
+      if (!mounted) return;
       if (_focusNode.hasFocus) {
         _morphController.forward();
-      } else {
-        if (_controller.text.trim().isEmpty) {
-          _morphController.reverse();
-        }
+      } else if (_controller.text.trim().isEmpty) {
+        _morphController.reverse();
       }
     };
     _focusNode.addListener(_focusListener!);
 
     _controllerListener = () {
+      if (!mounted) return;
       final has = _controller.text.trim().isNotEmpty;
       if (has != _hasText) {
         setState(() => _hasText = has);
@@ -80,34 +81,52 @@ class _ChatInputBarState extends State<ChatInputBar>
     };
     _controller.addListener(_controllerListener!);
 
-    _initSpeech();
+    // Defer plugin init until after the first frame to avoid startup races
+    // with MediaQuery / focus inherited widgets.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _initSpeech();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Safe place to read MediaQuery: dependencies update after the
+    // InheritedWidget has been updated, unlike WidgetsBindingObserver.didChangeMetrics
+    // which can run while MediaQuery elements are mid-replace (causes
+    // `_dependents.isEmpty` assertions).
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+
+    if (_lastViewInsetBottom > 0 &&
+        bottom == 0 &&
+        _focusNode.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (MediaQuery.viewInsetsOf(context).bottom == 0 &&
+            _focusNode.hasFocus) {
+          _focusNode.unfocus();
+        }
+      });
+    }
+    _lastViewInsetBottom = bottom;
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _speech.cancel();
     if (_focusListener != null) _focusNode.removeListener(_focusListener!);
-    if (_controllerListener != null) _controller.removeListener(_controllerListener!);
+    if (_controllerListener != null) {
+      _controller.removeListener(_controllerListener!);
+    }
+    // Detach focus before disposing the node so Focus/InheritedWidgets
+    // can clear dependents cleanly.
+    _focusNode.unfocus();
     _focusNode.dispose();
     _controller.dispose();
     _morphController.dispose();
     _pulseController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeMetrics() {
-    final bottom = WidgetsBinding
-        .instance.platformDispatcher.views.first.viewInsets.bottom;
-    if (bottom == 0 && _focusNode.hasFocus) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _focusNode.unfocus();
-        }
-      });
-    }
   }
 
   Future<void> _initSpeech() async {
@@ -225,6 +244,11 @@ class _ChatInputBarState extends State<ChatInputBar>
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    // Watch providers here (State.build), not inside AnimatedBuilder's builder.
+    // Looking up inherited widgets from another element's build can corrupt
+    // dependency tracking and trigger `_dependents.isEmpty` assertions.
+    final isGenerating = context.watch<ChatProvider>().isGenerating;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
     if (!_isProviderConfigured(settings)) {
       return _buildUnconfiguredState();
@@ -246,7 +270,7 @@ class _ChatInputBarState extends State<ChatInputBar>
             12,
             0,
             12,
-            8 + MediaQuery.of(context).padding.bottom * t,
+            8 + bottomPadding * t,
           ),
           child: Container(
             height: currentHeight,
@@ -273,8 +297,8 @@ class _ChatInputBarState extends State<ChatInputBar>
             child: ClipRRect(
               borderRadius: BorderRadius.circular(currentRadius),
               child: isExpanded
-                  ? _buildExpandedLayout()
-                  : _buildCollapsedLayout(),
+                  ? _buildExpandedLayout(isGenerating)
+                  : _buildCollapsedLayout(isGenerating),
             ),
           ),
         );
@@ -282,8 +306,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     );
   }
 
-  Widget _buildCollapsedLayout() {
-    final isGenerating = context.watch<ChatProvider>().isGenerating;
+  Widget _buildCollapsedLayout(bool isGenerating) {
     final displayText = _controller.text.trim();
 
     return Padding(
@@ -297,7 +320,7 @@ class _ChatInputBarState extends State<ChatInputBar>
               onTap: () {
                 _morphController.forward();
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _focusNode.requestFocus();
+                  if (mounted) _focusNode.requestFocus();
                 });
               },
               child: displayText.isNotEmpty
@@ -337,9 +360,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     );
   }
 
-  Widget _buildExpandedLayout() {
-    final isGenerating = context.watch<ChatProvider>().isGenerating;
-
+  Widget _buildExpandedLayout(bool isGenerating) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

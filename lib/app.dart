@@ -12,12 +12,16 @@ class KinoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
+    // Select only themeMode so unrelated SettingsProvider updates do not
+    // rebuild MaterialApp (and its inherited Theme/MediaQuery subtree).
+    final themeMode = context.select<SettingsProvider, ThemeMode>(
+      (s) => s.themeMode,
+    );
 
     return MaterialApp(
       title: 'Kino',
       debugShowCheckedModeBanner: false,
-      themeMode: settings.themeMode,
+      themeMode: themeMode,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       home: const HomeScreen(),
