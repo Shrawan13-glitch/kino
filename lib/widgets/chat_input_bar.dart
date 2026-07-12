@@ -95,7 +95,7 @@ class _ChatInputBarState extends State<ChatInputBar>
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     if (bottom == 0 && _focusNode.hasFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_controller.text.trim().isEmpty && mounted) {
+        if (mounted) {
           _focusNode.unfocus();
         }
       });
