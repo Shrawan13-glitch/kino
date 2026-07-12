@@ -8,6 +8,8 @@ class AppColors {
   static const success = Color(0xFF69F0AE);
   static const bubbleGradientStart = Color(0xFF6C63FF);
   static const bubbleGradientEnd = Color(0xFF8B6FFF);
+  static const sendButton = Color(0xFFFF6B6B);
+  static const sendButtonDark = Color(0xFFFF5252);
 
   static const _darkBg = Color(0xFF111118);
   static const _darkSurface = Color(0xFF1A1A2E);
@@ -16,6 +18,7 @@ class AppColors {
   static const _darkTextSecondary = Color(0xFF9898B0);
   static const _darkSidebarBg = Color(0xFF0E0E1A);
   static const _darkInputBg = Color(0xFF1E1E32);
+  static const _darkPillBg = Color(0xFF22223A);
   static const _darkBorder = Color(0xFF2A2A45);
 
   static const _lightBg = Color(0xFFF5F5FA);
@@ -25,6 +28,7 @@ class AppColors {
   static const _lightTextSecondary = Color(0xFF6B6B80);
   static const _lightSidebarBg = Color(0xFFF0F0F5);
   static const _lightInputBg = Color(0xFFE8E8F0);
+  static const _lightPillBg = Color(0xFFF0F0F8);
   static const _lightBorder = Color(0xFFD0D0DC);
 
   static Color _pick(BuildContext context, Color dark, Color light) =>
@@ -46,6 +50,8 @@ class AppColors {
       _pick(context, _darkInputBg, _lightInputBg);
   static Color border(BuildContext context) =>
       _pick(context, _darkBorder, _lightBorder);
+  static Color pillBg(BuildContext context) =>
+      _pick(context, _darkPillBg, _lightPillBg);
 }
 
 class AppTheme {
